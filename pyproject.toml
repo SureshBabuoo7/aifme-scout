@@ -1,0 +1,93 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aifme-scout"
+version = "0.0.0"
+description = "AIFME Scout OSS - open-source website and marketing intelligence toolkit"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.11"
+authors = [
+    {name = "AIFME", email = "oss@aifme.com"},
+]
+keywords = ["marketing", "intelligence", "scout", "aifme"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.4.0",
+    "black>=24.4.0",
+    "mypy>=1.10.0",
+    "pytest>=8.3.0",
+    "pytest-cov>=5.0.0",
+    "pre-commit>=3.7.0",
+    "build>=1.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/aifme/aifme-scout"
+Documentation = "https://github.com/aifme/aifme-scout/blob/main/README.md"
+Repository = "https://github.com/aifme/aifme-scout"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aifme_scout"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "DTZ", "T10", "ISC"]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["aifme_scout"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers -ra -q"
+minversion = "8.0"
+
+[tool.coverage.run]
+source = ["aifme_scout"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]

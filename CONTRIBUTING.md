@@ -5,8 +5,46 @@ Thank you for your interest in contributing to AIFME Scout OSS.
 ## Setup
 
 1. Fork and clone the repository.
-2. Install dependencies.
-3. Create a branch for your change.
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+3. Install development dependencies:
+   ```bash
+   pip install -e ".[dev]"
+   ```
+4. Install pre-commit hooks:
+   ```bash
+   pre-commit install
+   ```
+5. Create a branch for your change:
+   ```bash
+   git checkout -b feature/your-feature
+   ```
+
+## Verify Setup
+
+Run the test suite to verify your environment:
+
+```bash
+pytest
+```
+
+## Code Quality
+
+This project uses:
+- **Ruff** for linting and import sorting
+- **Black** for code formatting
+- **Mypy** for static type checking
+- **pytest** for testing
+
+Run checks manually:
+```bash
+ruff check src/ tests/
+black --check src/ tests/
+mypy src/
+```
 
 ## Branch Naming
 

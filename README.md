@@ -6,6 +6,18 @@ AIFME Scout OSS is the free, open-source, self-hosted entry point into AIFME's m
 
 Implementation in progress.
 
+## Development Setup
+
+```bash
+git clone https://github.com/aifme/aifme-scout.git
+cd aifme-scout
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+pre-commit install
+pytest
+```
+
 ## Repository Structure
 
 ```
