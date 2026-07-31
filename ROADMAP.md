@@ -1,8 +1,14 @@
 # Roadmap
 
-This roadmap follows the frozen [Scout OSS Implementation Roadmap v1.0](./docs/AIFME_Scout_OSS_Implementation_Roadmap_v1.0.md).
+This roadmap follows the frozen *Scout OSS Implementation Roadmap v1.0*.
 
-## Milestones
+## Source of Truth
+
+The full milestone specifications, dependency graph, and freeze policy are defined in:
+- Scout OSS Implementation Roadmap v1.0
+- Scout OSS Repository Blueprint v1.0
+- Scout OSS PRD v1.0
+- Scout OSS Architecture v1.0
 
 | Milestone | Name | Status |
 |---|---|---|
@@ -28,11 +34,3 @@ This roadmap follows the frozen [Scout OSS Implementation Roadmap v1.0](./docs/A
 | EXEC-20 | Documentation Completion | Pending |
 | EXEC-21 | Release Candidate | Pending |
 | EXEC-22 | Public Launch | Pending |
-
-## Source of Truth
-
-The full milestone specifications, dependency graph, and freeze policy are defined in:
-- [AIFME Scout OSS Implementation Roadmap v1.0](./docs/AIFME_Scout_OSS_Implementation_Roadmap_v1.0.md)
-- [AIFME Scout OSS Repository Blueprint v1.0](./docs/AIFME_Scout_OSS_Repository_Blueprint_v1.0.md)
-- [AIFME Scout OSS PRD v1.0](./docs/AIFME-Scout-OSS-PRD-v1.0.md)
-- [AIFME Scout OSS Architecture v1.0](./docs/AIFME_Scout_OSS_Architecture_v1.0.md)
