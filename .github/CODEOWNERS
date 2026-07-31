@@ -1,0 +1,11 @@
+# Default owner for all files
+* @aifme/core
+
+# Source code ownership
+/src/cli/ @aifme/core
+/src/api/ @aifme/core
+/src/engine/ @aifme/core
+/src/scanner/ @aifme/core
+/src/extractors/ @aifme/core
+/src/exporters/ @aifme/core
+/src/utils/ @aifme/core
