@@ -403,3 +403,46 @@ class SocialResult:
 
     target_url: str
     pages: list[SocialPageResult] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class CompetitorProvenance:
+    """Provenance for a discovered competitor."""
+
+    page_url: str
+    dom_path: str
+    tag: str
+    attribute: str
+    original_text: str | None = None
+    original_url: str | None = None
+
+
+@dataclass(frozen=True)
+class Competitor:
+    """Discovered competitor."""
+
+    name: str
+    url: str | None = None
+    source: str = ""
+    discovery_method: str = "USER_SUPPLIED"
+    confidence: str = "high"
+    evidence: str | None = None
+    provenance: CompetitorProvenance | None = None
+
+
+@dataclass(frozen=True)
+class CompetitorPageResult:
+    """Competitors discovered on a single page."""
+
+    url: str
+    competitors: list[Competitor] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class CompetitorResult:
+    """Complete competitor discovery result for a site."""
+
+    target_url: str
+    pages: list[CompetitorPageResult] = field(default_factory=list)
+    user_supplied: list[Competitor] = field(default_factory=list)
+    heuristic_discovery_status: str = "DEFERRED"

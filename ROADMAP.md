@@ -22,7 +22,7 @@ The full milestone specifications, dependency graph, and freeze policy are defin
 | EXEC-08 | Technology Detector | Done |
 | EXEC-09 | Content Extractor | Done |
 | EXEC-10 | Social Discovery | Done |
-| EXEC-11 | Competitor Discovery | Pending |
+| EXEC-11 | Competitor Discovery | Done |
 | EXEC-12 | Evidence Collector | Pending |
 | EXEC-13 | Schema Builder | Pending |
 | EXEC-14 | Summary Builder | Pending |

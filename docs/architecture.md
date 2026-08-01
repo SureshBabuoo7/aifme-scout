@@ -97,6 +97,35 @@ Finds linked social profiles from parsed page links.
 - CLI behavior
 - REST API behavior
 
+### Competitor Discovery (`src/extractors/competitors.py`)
+
+Assembles the competitor comparison set from explicit declarations and user-supplied lists.
+
+**Public interface:**
+- `resolve(ParsedSite, user_supplied=[]) -> CompetitorResult`
+
+**Data models:**
+- `CompetitorResult` — complete competitor discovery result
+- `CompetitorPageResult` — per-page discovered competitors
+- `Competitor` — discovered competitor
+- `CompetitorProvenance` — provenance tracking
+
+**Responsibilities:**
+- User-supplied competitor inclusion
+- Explicit competitor reference discovery from comparison/alternatives pages
+- Partner page link discovery
+- Duplicate elimination
+- Provenance preservation
+- Rule-based confidence assignment
+
+**Deferred by design:**
+- Heuristic competitor discovery (EXEC-14)
+- Evidence Collector
+- Summary Builder
+- Exporters
+- CLI behavior
+- REST API behavior
+
 ### SEO Extractor (`src/extractors/seo.py`)
 
 Derives on-page SEO signals from `ParsedSite`.

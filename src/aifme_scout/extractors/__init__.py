@@ -1,9 +1,14 @@
 """Extractors package."""
 
+from aifme_scout.extractors.competitors import resolve as resolve_competitors
 from aifme_scout.extractors.content import extract as extract_content
 from aifme_scout.extractors.metadata import extract as extract_metadata
 from aifme_scout.extractors.models import (
     CanonicalURL,
+    Competitor,
+    CompetitorPageResult,
+    CompetitorProvenance,
+    CompetitorResult,
     ContentBreadcrumb,
     ContentButton,
     ContentElementProvenance,
@@ -54,8 +59,13 @@ __all__ = [
     "discover_social",
     "extract_content",
     "extract_metadata",
+    "resolve_competitors",
     "to_simple_seo",
     "CanonicalURL",
+    "Competitor",
+    "CompetitorPageResult",
+    "CompetitorProvenance",
+    "CompetitorResult",
     "ContentBreadcrumb",
     "ContentButton",
     "ContentElementProvenance",
