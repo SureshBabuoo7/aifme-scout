@@ -233,3 +233,134 @@ class TechnologyResult:
 
     target_url: str
     pages: list[TechnologyPageResult] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class ContentElementProvenance:
+    """Provenance for an extracted content element."""
+
+    page_url: str
+    dom_path: str
+    tag: str
+    attributes: dict[str, str] = field(default_factory=dict)
+    original_text: str | None = None
+
+
+@dataclass(frozen=True)
+class ContentHeading:
+    """Extracted heading element."""
+
+    level: int
+    text: str
+    provenance: ContentElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class ContentParagraph:
+    """Extracted paragraph element."""
+
+    text: str
+    provenance: ContentElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class ContentListItem:
+    """Extracted list item element."""
+
+    text: str
+    provenance: ContentElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class ContentList:
+    """Extracted list element."""
+
+    list_type: str
+    items: list[ContentListItem] = field(default_factory=list)
+    provenance: ContentElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class ContentTable:
+    """Extracted table element."""
+
+    headers: list[str] = field(default_factory=list)
+    rows: list[list[str]] = field(default_factory=list)
+    provenance: ContentElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class ContentImage:
+    """Extracted image element."""
+
+    src: str
+    alt: str | None = None
+    provenance: ContentElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class ContentLink:
+    """Extracted link element."""
+
+    text: str
+    href: str
+    provenance: ContentElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class ContentButton:
+    """Extracted button element."""
+
+    text: str
+    provenance: ContentElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class ContentForm:
+    """Extracted form element."""
+
+    action: str | None = None
+    method: str | None = None
+    input_names: list[str] = field(default_factory=list)
+    provenance: ContentElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class ContentBreadcrumb:
+    """Extracted breadcrumb element."""
+
+    items: list[str] = field(default_factory=list)
+    provenance: ContentElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class ContentFooter:
+    """Extracted footer content."""
+
+    text: str
+    provenance: ContentElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class ContentPageResult:
+    """Content extracted from a single page."""
+
+    url: str
+    headings: list[ContentHeading] = field(default_factory=list)
+    paragraphs: list[ContentParagraph] = field(default_factory=list)
+    lists: list[ContentList] = field(default_factory=list)
+    tables: list[ContentTable] = field(default_factory=list)
+    images: list[ContentImage] = field(default_factory=list)
+    links: list[ContentLink] = field(default_factory=list)
+    buttons: list[ContentButton] = field(default_factory=list)
+    forms: list[ContentForm] = field(default_factory=list)
+    breadcrumbs: list[ContentBreadcrumb] = field(default_factory=list)
+    footer: ContentFooter | None = None
+
+
+@dataclass(frozen=True)
+class ContentResult:
+    """Complete content extraction result for a site."""
+
+    target_url: str
+    pages: list[ContentPageResult] = field(default_factory=list)

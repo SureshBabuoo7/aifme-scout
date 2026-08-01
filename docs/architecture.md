@@ -62,7 +62,6 @@ Converts raw HTML into a deterministic, navigable DOM tree.
 
 **Deferred by design:**
 - Metadata extraction
-- Content extraction
 - Social discovery
 - Competitor discovery
 - Evidence collection
@@ -105,7 +104,51 @@ Derives on-page SEO signals from `ParsedSite`.
 - SEO scoring
 - Recommendations
 - Ranking
-- Content Extractor
+- Social Discovery
+- Competitor Discovery
+- Evidence Collector
+- Summary Builder
+- Exporters
+- CLI behavior
+- REST API behavior
+
+### Content Extractor (`src/extractors/content.py`)
+
+Pulls structured content from the parsed body region.
+
+**Public interface:**
+- `extract(ParsedSite) -> ContentResult`
+
+**Data models:**
+- `ContentResult` — complete content extraction result
+- `ContentPageResult` — per-page extracted content
+- `ContentHeading` — extracted heading element
+- `ContentParagraph` — extracted paragraph element
+- `ContentList` — extracted list element
+- `ContentListItem` — extracted list item element
+- `ContentTable` — extracted table element
+- `ContentImage` — extracted image element
+- `ContentLink` — extracted link element
+- `ContentButton` — extracted button element
+- `ContentForm` — extracted form element
+- `ContentBreadcrumb` — extracted breadcrumb element
+- `ContentFooter` — extracted footer content
+- `ContentElementProvenance` — provenance tracking
+
+**Responsibilities:**
+- Heading extraction (H1–H6)
+- Paragraph extraction
+- List extraction (ordered and unordered)
+- Table extraction
+- Image extraction with alt text
+- Link extraction with text and destinations
+- Button extraction
+- Form extraction
+- Breadcrumb extraction
+- Footer content extraction
+- Provenance preservation
+
+**Deferred by design:**
 - Social Discovery
 - Competitor Discovery
 - Evidence Collector
