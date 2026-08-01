@@ -31,6 +31,10 @@ from aifme_scout.extractors.models import (
     RobotsMeta,
     SEOPageResult,
     SEOResult,
+    SocialPageResult,
+    SocialProfile,
+    SocialProfileProvenance,
+    SocialResult,
     StructuredDataPresence,
     Technology,
     TechnologyEvidence,
@@ -41,11 +45,13 @@ from aifme_scout.extractors.models import (
     VerificationTag,
 )
 from aifme_scout.extractors.seo import analyze, to_simple_seo
+from aifme_scout.extractors.social import discover as discover_social
 from aifme_scout.extractors.technology import detect as detect_technology
 
 __all__ = [
     "analyze",
     "detect_technology",
+    "discover_social",
     "extract_content",
     "extract_metadata",
     "to_simple_seo",
@@ -77,6 +83,10 @@ __all__ = [
     "RobotsMeta",
     "SEOPageResult",
     "SEOResult",
+    "SocialPageResult",
+    "SocialProfile",
+    "SocialProfileProvenance",
+    "SocialResult",
     "StructuredDataPresence",
     "Technology",
     "TechnologyEvidence",

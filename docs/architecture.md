@@ -62,11 +62,40 @@ Converts raw HTML into a deterministic, navigable DOM tree.
 
 **Deferred by design:**
 - Metadata extraction
-- Social discovery
 - Competitor discovery
 - Evidence collection
 - Summary Builder
 - Exporters
+
+### Social Discovery (`src/extractors/social.py`)
+
+Finds linked social profiles from parsed page links.
+
+**Public interface:**
+- `discover(ParsedSite) -> SocialResult`
+
+**Data models:**
+- `SocialResult` — complete social discovery result
+- `SocialPageResult` — per-page discovered profiles
+- `SocialProfile` — discovered social profile
+- `SocialProfileProvenance` — provenance tracking
+
+**Responsibilities:**
+- Platform detection from link URLs
+- JSON-LD social link support
+- Open Graph reference support
+- Header/footer navigation link support
+- Relative URL normalization
+- Duplicate elimination
+- Provenance preservation
+
+**Deferred by design:**
+- Competitor Discovery
+- Evidence Collector
+- Summary Builder
+- Exporters
+- CLI behavior
+- REST API behavior
 
 ### SEO Extractor (`src/extractors/seo.py`)
 
@@ -104,7 +133,6 @@ Derives on-page SEO signals from `ParsedSite`.
 - SEO scoring
 - Recommendations
 - Ranking
-- Social Discovery
 - Competitor Discovery
 - Evidence Collector
 - Summary Builder
@@ -182,7 +210,6 @@ Identifies the target's technology stack from deterministic evidence.
 
 **Deferred by design:**
 - Content Extractor
-- Social Discovery
 - Competitor Discovery
 - Evidence Collector
 - Summary Builder

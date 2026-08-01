@@ -364,3 +364,42 @@ class ContentResult:
 
     target_url: str
     pages: list[ContentPageResult] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class SocialProfileProvenance:
+    """Provenance for a discovered social profile."""
+
+    page_url: str
+    dom_path: str
+    tag: str
+    attribute: str
+    original_url: str
+
+
+@dataclass(frozen=True)
+class SocialProfile:
+    """Discovered social profile."""
+
+    platform: str
+    url: str
+    username: str | None = None
+    profile_type: str | None = None
+    detection_method: str = "link"
+    provenance: SocialProfileProvenance | None = None
+
+
+@dataclass(frozen=True)
+class SocialPageResult:
+    """Social profiles discovered on a single page."""
+
+    url: str
+    profiles: list[SocialProfile] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class SocialResult:
+    """Complete social discovery result for a site."""
+
+    target_url: str
+    pages: list[SocialPageResult] = field(default_factory=list)
