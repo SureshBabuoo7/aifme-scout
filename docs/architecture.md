@@ -63,9 +63,34 @@ Converts raw HTML into a deterministic, navigable DOM tree.
 **Deferred by design:**
 - Metadata extraction
 - Competitor discovery
-- Evidence collection
 - Summary Builder
 - Exporters
+
+### Evidence Collector (`src/extractors/evidence.py`)
+
+Normalizes extractor outputs into a common evidence model.
+
+**Public interface:**
+- `collect(seo_result, metadata_result, technology_result, content_result, social_result, competitor_result, target_url) -> EvidenceCollection`
+
+**Data models:**
+- `EvidenceCollection` — complete evidence collection for a site
+- `EvidenceItem` — normalized evidence item from any extractor
+- `EvidenceProvenance` — unified provenance for an evidence item
+
+**Responsibilities:**
+- Evidence normalization from all extractors
+- Evidence ID generation
+- Deterministic ordering
+- Duplicate elimination
+- Provenance preservation
+- Confidence preservation from upstream extractors
+
+**Deferred by design:**
+- Schema Builder
+- Summary Builder
+- CLI behavior
+- REST API behavior
 
 ### Social Discovery (`src/extractors/social.py`)
 

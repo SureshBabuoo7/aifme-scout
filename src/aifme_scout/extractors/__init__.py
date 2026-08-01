@@ -2,6 +2,7 @@
 
 from aifme_scout.extractors.competitors import resolve as resolve_competitors
 from aifme_scout.extractors.content import extract as extract_content
+from aifme_scout.extractors.evidence import collect as collect_evidence
 from aifme_scout.extractors.metadata import extract as extract_metadata
 from aifme_scout.extractors.models import (
     CanonicalURL,
@@ -24,6 +25,9 @@ from aifme_scout.extractors.models import (
     ContentResult,
     ContentTable,
     ElementProvenance,
+    EvidenceCollection,
+    EvidenceItem,
+    EvidenceProvenance,
     Heading,
     HeadingHierarchy,
     Indexability,
@@ -55,6 +59,7 @@ from aifme_scout.extractors.technology import detect as detect_technology
 
 __all__ = [
     "analyze",
+    "collect_evidence",
     "detect_technology",
     "discover_social",
     "extract_content",
@@ -81,6 +86,9 @@ __all__ = [
     "ContentResult",
     "ContentTable",
     "ElementProvenance",
+    "EvidenceCollection",
+    "EvidenceItem",
+    "EvidenceProvenance",
     "Heading",
     "HeadingHierarchy",
     "Indexability",

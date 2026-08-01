@@ -446,3 +446,40 @@ class CompetitorResult:
     pages: list[CompetitorPageResult] = field(default_factory=list)
     user_supplied: list[Competitor] = field(default_factory=list)
     heuristic_discovery_status: str = "DEFERRED"
+
+
+@dataclass(frozen=True)
+class EvidenceProvenance:
+    """Unified provenance for an evidence item."""
+
+    page_url: str
+    dom_path: str | None = None
+    tag: str | None = None
+    attribute: str | None = None
+    original_text: str | None = None
+    original_url: str | None = None
+    detection_rule: str | None = None
+    source: str | None = None
+
+
+@dataclass(frozen=True)
+class EvidenceItem:
+    """Normalized evidence item from any extractor."""
+
+    evidence_id: str
+    evidence_type: str
+    extractor_source: str
+    value: object
+    provenance: EvidenceProvenance
+    confidence: str
+    page_url: str
+    timestamp: str
+    attributes: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class EvidenceCollection:
+    """Complete evidence collection for a site."""
+
+    target_url: str
+    items: list[EvidenceItem] = field(default_factory=list)
