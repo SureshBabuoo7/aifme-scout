@@ -17,14 +17,20 @@ from aifme_scout.extractors.models import (
     SEOPageResult,
     SEOResult,
     StructuredDataPresence,
+    Technology,
+    TechnologyEvidence,
+    TechnologyPageResult,
+    TechnologyResult,
     Title,
     TwitterCardSEO,
     VerificationTag,
 )
 from aifme_scout.extractors.seo import analyze, to_simple_seo
+from aifme_scout.extractors.technology import detect as detect_technology
 
 __all__ = [
     "analyze",
+    "detect_technology",
     "extract_metadata",
     "to_simple_seo",
     "CanonicalURL",
@@ -42,6 +48,10 @@ __all__ = [
     "SEOPageResult",
     "SEOResult",
     "StructuredDataPresence",
+    "Technology",
+    "TechnologyEvidence",
+    "TechnologyPageResult",
+    "TechnologyResult",
     "Title",
     "TwitterCardSEO",
     "VerificationTag",

@@ -62,7 +62,6 @@ Converts raw HTML into a deterministic, navigable DOM tree.
 
 **Deferred by design:**
 - Metadata extraction
-- Technology detection
 - Content extraction
 - Social discovery
 - Competitor discovery
@@ -106,7 +105,39 @@ Derives on-page SEO signals from `ParsedSite`.
 - SEO scoring
 - Recommendations
 - Ranking
-- Technology Detector
+- Content Extractor
+- Social Discovery
+- Competitor Discovery
+- Evidence Collector
+- Summary Builder
+- Exporters
+- CLI behavior
+- REST API behavior
+
+### Technology Detector (`src/extractors/technology.py`)
+
+Identifies the target's technology stack from deterministic evidence.
+
+**Public interface:**
+- `detect(RawSite, ParsedSite) -> TechnologyResult`
+
+**Data models:**
+- `TechnologyResult` — complete technology detection result
+- `TechnologyPageResult` — per-page detected technologies
+- `Technology` — detected technology with provenance
+- `TechnologyEvidence` — evidence for a detection
+
+**Responsibilities:**
+- Framework detection (React, Next.js, Vue, Nuxt, Angular, Svelte)
+- CMS detection (WordPress, Drupal, Joomla, Ghost, Shopify, Wix, Squarespace)
+- Web server detection (nginx, Apache, IIS)
+- Analytics detection (Google Analytics, Google Tag Manager, Plausible, Matomo)
+- CSS framework detection (Bootstrap, Tailwind CSS)
+- Version extraction where explicitly available
+- Rule-based confidence assignment
+- Provenance preservation
+
+**Deferred by design:**
 - Content Extractor
 - Social Discovery
 - Competitor Discovery

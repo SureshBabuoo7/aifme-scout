@@ -1,4 +1,4 @@
-"""Data models for the SEO Extractor module."""
+"""Data models for the extractor modules."""
 
 from __future__ import annotations
 
@@ -195,3 +195,41 @@ class MetadataResult:
 
     target_url: str
     pages: list[MetadataPageResult] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class TechnologyEvidence:
+    """Evidence for a detected technology."""
+
+    page_url: str
+    detection_rule: str
+    matched_value: str
+    source: str
+
+
+@dataclass(frozen=True)
+class Technology:
+    """Detected technology."""
+
+    name: str
+    category: str
+    version: str | None = None
+    confidence: str = "medium"
+    detection_method: str = "fingerprint"
+    evidence: list[TechnologyEvidence] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class TechnologyPageResult:
+    """Technologies detected on a single page."""
+
+    url: str
+    technologies: list[Technology] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class TechnologyResult:
+    """Complete technology detection result for a site."""
+
+    target_url: str
+    pages: list[TechnologyPageResult] = field(default_factory=list)
