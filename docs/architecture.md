@@ -106,12 +106,53 @@ Derives on-page SEO signals from `ParsedSite`.
 - SEO scoring
 - Recommendations
 - Ranking
-- Metadata Extractor
 - Technology Detector
 - Content Extractor
 - Social Discovery
 - Competitor Discovery
 - Evidence Collector
+- Summary Builder
+- Exporters
+- CLI behavior
+- REST API behavior
+
+### Metadata Extractor (`src/extractors/metadata.py`)
+
+Pulls structured metadata from the parsed head region.
+
+**Public interface:**
+- `extract(ParsedSite) -> MetadataResult`
+
+**Data models:**
+- `MetadataResult` — complete metadata extraction result
+- `MetadataPageResult` — per-page metadata
+- `MetaValue` — extracted metadata value with provenance
+- `MetaLink` — discovered link with rel/type
+- `VerificationTag` — site verification tag
+- `ElementProvenance` — provenance tracking
+
+**Responsibilities:**
+- Application name extraction
+- Generator extraction
+- Author extraction
+- Publisher extraction
+- Copyright extraction
+- Theme color extraction
+- Color scheme extraction
+- Favicon discovery
+- Apple touch icon discovery
+- Manifest extraction
+- RSS/Atom feed discovery
+- Alternate link discovery
+- Verification tag extraction (Google, Bing, Yandex, Facebook)
+- Web app capable flags
+
+**Deferred by design:**
+- Technology detection
+- Content extraction
+- Social discovery
+- Competitor discovery
+- Evidence collection
 - Summary Builder
 - Exporters
 - CLI behavior

@@ -136,3 +136,62 @@ class SEOResult:
 
     target_url: str
     pages: list[SEOPageResult] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class MetaValue:
+    """Extracted metadata value with provenance."""
+
+    value: str | None
+    provenance: ElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class MetaLink:
+    """Discovered link with rel/type."""
+
+    url: str
+    rel: str | None = None
+    type_: str | None = None
+    provenance: ElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class VerificationTag:
+    """Site verification tag."""
+
+    platform: str
+    value: str
+    provenance: ElementProvenance | None = None
+
+
+@dataclass(frozen=True)
+class MetadataPageResult:
+    """Metadata extracted from a single page."""
+
+    url: str
+    site_name: MetaValue | None = None
+    application_name: MetaValue | None = None
+    generator: MetaValue | None = None
+    author: MetaValue | None = None
+    publisher: MetaValue | None = None
+    copyright: MetaValue | None = None
+    theme_color: MetaValue | None = None
+    color_scheme: MetaValue | None = None
+    favicons: list[MetaLink] = field(default_factory=list)
+    apple_touch_icons: list[MetaLink] = field(default_factory=list)
+    manifest: MetaValue | None = None
+    rss_feeds: list[MetaLink] = field(default_factory=list)
+    atom_feeds: list[MetaLink] = field(default_factory=list)
+    alternate_links: list[MetaLink] = field(default_factory=list)
+    verification_tags: list[VerificationTag] = field(default_factory=list)
+    web_app_capable: bool = False
+    mobile_web_app_capable: bool = False
+
+
+@dataclass(frozen=True)
+class MetadataResult:
+    """Complete metadata extraction result for a site."""
+
+    target_url: str
+    pages: list[MetadataPageResult] = field(default_factory=list)

@@ -17,8 +17,8 @@ The full milestone specifications, dependency graph, and freeze policy are defin
 | EXEC-03 | Core Infrastructure | Pending |
 | EXEC-04 | Website Scanner | Pending |
 | EXEC-05 | HTML Parser | Pending |
-| EXEC-06 | SEO Extractor | Pending |
-| EXEC-07 | Metadata Extractor | Pending |
+| EXEC-06 | SEO Extractor | Done |
+| EXEC-07 | Metadata Extractor | Done |
 | EXEC-08 | Technology Detector | Pending |
 | EXEC-09 | Content Extractor | Pending |
 | EXEC-10 | Social Discovery | Pending |
