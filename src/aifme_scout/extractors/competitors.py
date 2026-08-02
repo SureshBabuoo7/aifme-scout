@@ -1,6 +1,7 @@
 """Competitor Discovery module.
 
-Discovers competitors from explicit declarations and user-supplied lists.
+Discovers competitors from explicit declarations, user-supplied lists,
+and deterministic heuristic classification.
 """
 
 from __future__ import annotations
@@ -25,6 +26,87 @@ _COMPETITOR_PAGE_KEYWORDS = re.compile(
     r"alternatives|competitors|comparison|compare|partners|versus|vs\.?|vs$",
     re.IGNORECASE,
 )
+
+_COMPETITOR_DISCOVERY_DOMAINS: dict[str, list[str]] = {
+    "e-commerce": [
+        "amazon.com",
+        "ebay.com",
+        "etsy.com",
+        "shopify.com",
+        "woocommerce.com",
+        "bigcommerce.com",
+        "magento.com",
+        "bigcartel.com",
+        "ecwid.com",
+        "squarespace.com/commerce",
+    ],
+    "saas": [
+        "salesforce.com",
+        "hubspot.com",
+        "zendesk.com",
+        "intercom.com",
+        "mailchimp.com",
+        "zoho.com",
+        "freshworks.com",
+        "pipedrive.com",
+        "asana.com",
+        "monday.com",
+        "notion.so",
+    ],
+    "blog": [
+        "wordpress.com",
+        "medium.com",
+        "substack.com",
+        "blogger.com",
+        "wix.com/blog",
+        "squarespace.com/blog",
+        "ghost.org",
+        "joomla.org",
+    ],
+    "agency": [
+        "clutch.co",
+        "upwork.com",
+        "fiverr.com",
+        "99designs.com",
+        "toptal.com",
+        "crowdspring.com",
+        "designhill.com",
+    ],
+    "media": [
+        "youtube.com",
+        "vimeo.com",
+        "twitch.tv",
+        "spotify.com",
+        "soundcloud.com",
+        "medium.com",
+        "substack.com",
+    ],
+    "hosting": [
+        "bluehost.com",
+        "hostgator.com",
+        "siteground.com",
+        "dreamhost.com",
+        "a2hosting.com",
+        "inmotionhosting.com",
+        "namecheap.com",
+    ],
+    "cms": [
+        "wordpress.org",
+        "drupal.org",
+        "joomla.org",
+        "craftcms.com",
+        "contentful.com",
+        "strapi.io",
+    ],
+    "ecommerce-platform": [
+        "shopify.com",
+        "woocommerce.com",
+        "magento.com",
+        "bigcommerce.com",
+        "prestashop.com",
+        "opencart.com",
+    ],
+}
 
 
 def _build_dom_path(element: Element | None) -> str:
@@ -141,18 +223,71 @@ def _discover_explicit(parsed_site: ParsedSite) -> list[Competitor]:
     return competitors
 
 
+def _discover_heuristic(
+    parsed_site: ParsedSite,
+    target_classification: str | None = None,
+) -> list[Competitor]:
+    """Discover competitors heuristically based on target classification.
+
+    Heuristic discovery is best-effort and explicitly not authoritative.
+    Only known competitor domains for the classified category are proposed.
+
+    Args:
+        parsed_site: Parsed site output from the HTML parser.
+        target_classification: Optional classification from Summary Builder.
+
+    Returns:
+        List of heuristically discovered competitors.
+    """
+    if not target_classification or target_classification == "general":
+        return []
+
+    known_domains = _COMPETITOR_DISCOVERY_DOMAINS.get(target_classification, [])
+    if not known_domains:
+        return []
+
+    base_domain = urlparse(parsed_site.target_url).netloc.lower()
+    if base_domain.startswith("www."):
+        base_domain = base_domain[4:]
+
+    competitors: list[Competitor] = []
+    for domain in known_domains:
+        if domain == base_domain:
+            continue
+        name = _extract_name_from_url(f"https://{domain}")
+        competitors.append(
+            Competitor(
+                name=name,
+                url=f"https://{domain}",
+                source="heuristic_discovery",
+                discovery_method="HEURISTIC",
+                confidence="medium",
+                evidence=f"Heuristic competitor for {target_classification} category",
+                provenance=None,
+            )
+        )
+
+    return competitors
+
+
 def resolve(
     parsed_site: ParsedSite,
     user_supplied: list[str] | None = None,
+    target_classification: str | None = None,
 ) -> CompetitorResult:
-    """Discover competitors from explicit declarations and user-supplied list.
+    """Discover competitors from explicit declarations, user-supplied list,
+    and deterministic heuristic classification.
 
-    Discovery is deterministic and evidence-driven. Only explicit competitor
-    references are discovered. Heuristic discovery is intentionally deferred.
+    Discovery is evidence-driven. Explicit competitor references are
+    discovered first. User-supplied competitors are included verbatim.
+    Heuristic discovery uses target classification from the Summary
+    Builder to propose known competitors for the classified category.
 
     Args:
         parsed_site: Parsed site output from the HTML parser.
         user_supplied: Optional list of user-supplied competitor URLs.
+        target_classification: Optional classification from Summary Builder
+            used for heuristic competitor discovery.
 
     Returns:
         CompetitorResult with discovered competitors.
@@ -175,8 +310,9 @@ def resolve(
             )
 
     explicit_competitors = _discover_explicit(parsed_site)
+    heuristic_competitors = _discover_heuristic(parsed_site, target_classification)
 
-    all_competitors = user_competitors + explicit_competitors
+    all_competitors = user_competitors + explicit_competitors + heuristic_competitors
     seen_urls: set[str] = set()
     deduplicated: list[Competitor] = []
     for competitor in all_competitors:
@@ -192,9 +328,11 @@ def resolve(
             page_competitors.extend(user_competitors)
         pages.append(CompetitorPageResult(url=parsed_page.url, competitors=page_competitors))
 
+    heuristic_status = "COMPLETED" if heuristic_competitors else "NOT_APPLICABLE"
+
     return CompetitorResult(
         target_url=parsed_site.target_url,
         pages=pages,
         user_supplied=user_competitors,
-        heuristic_discovery_status="DEFERRED",
+        heuristic_discovery_status=heuristic_status,
     )

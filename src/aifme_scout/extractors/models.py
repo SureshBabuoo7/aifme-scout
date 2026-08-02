@@ -483,3 +483,36 @@ class EvidenceCollection:
 
     target_url: str
     items: list[EvidenceItem] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class ScoutMeta:
+    """Schema metadata."""
+
+    schema_version: str
+    engine_version: str
+    timestamp: str
+
+
+@dataclass(frozen=True)
+class ScoutSite:
+    """Site-level information."""
+
+    url: str
+    target_url: str
+
+
+@dataclass(frozen=True)
+class ScoutSchema:
+    """Complete Scout OSS schema."""
+
+    meta: ScoutMeta
+    site: ScoutSite
+    seo: list[EvidenceItem] = field(default_factory=list)
+    metadata: list[EvidenceItem] = field(default_factory=list)
+    technology: list[EvidenceItem] = field(default_factory=list)
+    content: list[EvidenceItem] = field(default_factory=list)
+    social: list[EvidenceItem] = field(default_factory=list)
+    competitors: list[EvidenceItem] = field(default_factory=list)
+    evidence: list[EvidenceItem] = field(default_factory=list)
+    diagnostics: dict[str, object] = field(default_factory=dict)

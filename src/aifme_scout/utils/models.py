@@ -166,6 +166,8 @@ class ScanOptions:
     crawl_delay_ms: int = 1000
     max_pages: int = 25
     headless: bool = False
+    timeout: float | None = None
+    user_agent: str | None = None
 
 
 @dataclass(frozen=True)
@@ -196,4 +198,4 @@ class HealthStatus:
     """Health check response."""
 
     status: str = "ok"
-    version: str = "0.0.0"
+    version: str = "1.0.0-rc1"

@@ -1,0 +1,28 @@
+{
+  "competitors": [],
+  "content": [],
+  "diagnostics": {
+    "build_timestamp": "2024-01-01T00:00:00+00:00",
+    "competitor_items": 0,
+    "content_items": 0,
+    "metadata_items": 0,
+    "seo_items": 0,
+    "social_items": 0,
+    "technology_items": 0,
+    "total_evidence_items": 0
+  },
+  "evidence": [],
+  "meta": {
+    "engine_version": "1.0.0-rc1",
+    "schema_version": "1.0.0",
+    "timestamp": "2024-01-01T00:00:00+00:00"
+  },
+  "metadata": [],
+  "seo": [],
+  "site": {
+    "target_url": "https://example.com",
+    "url": "https://example.com"
+  },
+  "social": [],
+  "technology": []
+}

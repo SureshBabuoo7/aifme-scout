@@ -19,6 +19,18 @@ jobs:
       - run: ruff check src/ tests/
       - run: ruff format --check src/ tests/
 
+  schema:
+    name: Schema Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: python -c "import json, jsonschema; jsonschema.Draft7Validator.check_schema(json.load(open('schemas/v1/scan-result.schema.json')))"
+      - run: pytest tests/unit/test_schema.py tests/integration/test_schema_integration.py -v
+
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest

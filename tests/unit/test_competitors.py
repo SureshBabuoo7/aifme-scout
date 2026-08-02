@@ -168,10 +168,17 @@ class TestDeterministic:
 
 
 class TestDeferredHeuristic:
-    def test_heuristic_status_deferred(self) -> None:
+    def test_heuristic_status_not_applicable_without_classification(self) -> None:
         html = _load_fixture("minimal.html")
         result = _parse(html)
-        assert result.heuristic_discovery_status == "DEFERRED"
+        assert result.heuristic_discovery_status == "NOT_APPLICABLE"
+
+    def test_heuristic_status_completed_with_classification(self) -> None:
+        html = _load_fixture("wordpress.html")
+        raw_site = _make_raw_site(html)
+        parsed = parse(raw_site)
+        competitors = resolve_competitors(parsed, target_classification="blog")
+        assert competitors.heuristic_discovery_status == "COMPLETED"
 
 
 class TestMissingCompetitors:

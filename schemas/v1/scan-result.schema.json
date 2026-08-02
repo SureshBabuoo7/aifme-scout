@@ -1,9 +1,230 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ScanResult",
-  "description": "Canonical scan result schema.",
+  "description": "Canonical Scout OSS scan result schema v1.",
   "type": "object",
-  "properties": {},
-  "required": [],
+  "required": [
+    "meta",
+    "site",
+    "seo",
+    "metadata",
+    "technology",
+    "content",
+    "social",
+    "competitors",
+    "evidence",
+    "diagnostics"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["schema_version", "engine_version", "timestamp"],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "description": "Semver schema version independent of engine version."
+        },
+        "engine_version": {
+          "type": "string",
+          "description": "Semver engine version."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO-8601 UTC timestamp of when the schema was built."
+        }
+      },
+      "additionalProperties": false
+    },
+    "site": {
+      "type": "object",
+      "required": ["url", "target_url"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Canonical target URL."
+        },
+        "target_url": {
+          "type": "string",
+          "description": "Original target URL supplied by the user."
+        }
+      },
+      "additionalProperties": false
+    },
+    "seo": {
+      "type": "array",
+      "description": "Evidence items derived from on-page SEO signals.",
+      "items": {"$ref": "#/definitions/evidenceItem"}
+    },
+    "metadata": {
+      "type": "array",
+      "description": "Evidence items derived from structured head metadata.",
+      "items": {"$ref": "#/definitions/evidenceItem"}
+    },
+    "technology": {
+      "type": "array",
+      "description": "Evidence items for detected technology fingerprints.",
+      "items": {"$ref": "#/definitions/evidenceItem"}
+    },
+    "content": {
+      "type": "array",
+      "description": "Evidence items extracted from readable body content.",
+      "items": {"$ref": "#/definitions/evidenceItem"}
+    },
+    "social": {
+      "type": "array",
+      "description": "Evidence items for discovered social profile links.",
+      "items": {"$ref": "#/definitions/evidenceItem"}
+    },
+    "competitors": {
+      "type": "array",
+      "description": "Evidence items for resolved competitors.",
+      "items": {"$ref": "#/definitions/evidenceItem"}
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Complete flat list of all evidence items across every section.",
+      "items": {"$ref": "#/definitions/evidenceItem"}
+    },
+    "diagnostics": {
+      "type": "object",
+      "description": "Build-time diagnostics and counters.",
+      "required": [
+        "total_evidence_items",
+        "seo_items",
+        "metadata_items",
+        "technology_items",
+        "content_items",
+        "social_items",
+        "competitor_items",
+        "build_timestamp"
+      ],
+      "properties": {
+        "total_evidence_items": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "seo_items": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "metadata_items": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "technology_items": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "content_items": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "social_items": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "competitor_items": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "build_timestamp": {
+          "type": "string",
+          "description": "ISO-8601 UTC timestamp when the schema was built."
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "evidenceItem": {
+      "type": "object",
+      "required": [
+        "evidence_id",
+        "evidence_type",
+        "extractor_source",
+        "value",
+        "provenance",
+        "confidence",
+        "page_url",
+        "timestamp"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "description": "Deterministic unique identifier for this evidence item."
+        },
+        "evidence_type": {
+          "type": "string",
+          "description": "Machine-readable type label for this evidence item."
+        },
+        "extractor_source": {
+          "type": "string",
+          "description": "The extractor module that produced this item."
+        },
+        "value": {
+          "description": "The extracted value. Type varies by evidence_type."
+        },
+        "provenance": {"$ref": "#/definitions/evidenceProvenance"},
+        "confidence": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "description": "Confidence level assigned by the extractor."
+        },
+        "page_url": {
+          "type": "string",
+          "description": "URL of the page where this evidence was found."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO-8601 UTC timestamp when this evidence was collected."
+        },
+        "attributes": {
+          "type": "object",
+          "description": "Additional extractor-specific attributes.",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidenceProvenance": {
+      "type": "object",
+      "required": ["page_url"],
+      "properties": {
+        "page_url": {
+          "type": "string",
+          "description": "URL of the page where the evidence was found."
+        },
+        "dom_path": {
+          "type": ["string", "null"],
+          "description": "DOM path to the element."
+        },
+        "tag": {
+          "type": ["string", "null"],
+          "description": "HTML tag name of the source element."
+        },
+        "attribute": {
+          "type": ["string", "null"],
+          "description": "HTML attribute name of the source element."
+        },
+        "original_text": {
+          "type": ["string", "null"],
+          "description": "Original text snippet of the source element."
+        },
+        "original_url": {
+          "type": ["string", "null"],
+          "description": "Original URL from the source element (e.g. href, src)."
+        },
+        "detection_rule": {
+          "type": ["string", "null"],
+          "description": "Rule or pattern that triggered detection."
+        },
+        "source": {
+          "type": ["string", "null"],
+          "description": "External source reference (e.g. competitor source page)."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
   "additionalProperties": true
 }

@@ -38,6 +38,9 @@ from aifme_scout.extractors.models import (
     MetaValue,
     OpenGraphSEO,
     RobotsMeta,
+    ScoutMeta,
+    ScoutSchema,
+    ScoutSite,
     SEOPageResult,
     SEOResult,
     SocialPageResult,
@@ -53,12 +56,15 @@ from aifme_scout.extractors.models import (
     TwitterCardSEO,
     VerificationTag,
 )
+from aifme_scout.extractors.schema import build as build_schema
+from aifme_scout.extractors.schema import validate as validate_schema
 from aifme_scout.extractors.seo import analyze, to_simple_seo
 from aifme_scout.extractors.social import discover as discover_social
 from aifme_scout.extractors.technology import detect as detect_technology
 
 __all__ = [
     "analyze",
+    "build_schema",
     "collect_evidence",
     "detect_technology",
     "discover_social",
@@ -66,6 +72,7 @@ __all__ = [
     "extract_metadata",
     "resolve_competitors",
     "to_simple_seo",
+    "validate_schema",
     "CanonicalURL",
     "Competitor",
     "CompetitorPageResult",
@@ -101,6 +108,9 @@ __all__ = [
     "RobotsMeta",
     "SEOPageResult",
     "SEOResult",
+    "ScoutMeta",
+    "ScoutSchema",
+    "ScoutSite",
     "SocialPageResult",
     "SocialProfile",
     "SocialProfileProvenance",

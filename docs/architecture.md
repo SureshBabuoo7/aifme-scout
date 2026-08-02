@@ -1,9 +1,6 @@
 # Architecture
 
-_Architecture documentation will be completed in EXEC-20._
-
-See the frozen specification:
-- [AIFME Scout OSS Architecture v1.0](./AIFME_Scout_OSS_Architecture_v1.0.md)
+This document describes the implemented modules in AIFME Scout OSS.
 
 ## Implemented Modules
 
@@ -310,5 +307,81 @@ Pulls structured metadata from the parsed head region.
 - Evidence collection
 - Summary Builder
 - Exporters
+- REST API behavior
+
+### Command Line Interface (`src/cli/__init__.py`)
+
+The CLI is the orchestration layer for Scout OSS. It executes the complete
+pipeline by calling existing modules in sequence.
+
+**Public interface:**
+- `main(argv: list[str] | None = None) -> int`
+
+**Responsibilities:**
+- Parse CLI arguments
+- Resolve configuration
+- Orchestrate the full pipeline
+- Handle exit codes
+- Export JSON and/or Markdown output
+
+**Deferred by design:**
+- REST API behavior
+
+### JSON Exporter (`src/exporters/json_exporter.py`)
+
+Serializes a `ScoutSchema` into a stable JSON document.
+
+**Public interface:**
+- `export(schema: ScoutSchema) -> str`
+- `export_to_file(schema, path) -> None`
+
+**Responsibilities:**
+- Faithful serialization of canonical schema
+- UTF-8 pretty-printed output
+- Stable key ordering
+- Schema compliance
+- Never mutates input schema
+
+**Deferred by design:**
 - CLI behavior
 - REST API behavior
+
+### Markdown Exporter (`src/exporters/markdown_exporter.py`)
+
+Renders a `ScoutSummary` into a deterministic Markdown document.
+
+**Public interface:**
+- `export(summary: Summary) -> str`
+- `export_to_file(summary, path) -> None`
+
+**Responsibilities:**
+- Exact rendering of summary text
+- UTF-8 output
+- Never mutates input summary
+- Never summarizes, infers, or classifies
+
+**Deferred by design:**
+- CLI behavior
+
+### REST API (`src/api/app.py`)
+
+HTTP interface for Scout OSS using FastAPI. Reuses the existing
+`RequestHandler.handle()` for pipeline orchestration.
+
+**Public interface:**
+- `GET /` - API documentation links
+- `GET /health` - Health check
+- `GET /version` - Version information
+- `POST /scan` - Scan a website
+
+**Responsibilities:**
+- HTTP request/response handling
+- Request validation
+- Error mapping to HTTP status codes
+- Automatic OpenAPI/Swagger documentation
+- Reuses RequestHandler without duplicating pipeline logic
+
+**Deferred by design:**
+- Authentication
+- Persistence
+- Rate limiting

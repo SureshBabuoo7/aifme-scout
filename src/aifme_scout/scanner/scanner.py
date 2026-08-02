@@ -25,7 +25,7 @@ from aifme_scout.utils.models import ScanError as ModelScanError
 
 MAX_REDIRECTS = 10
 MAX_RESPONSE_SIZE_BYTES = 10 * 1024 * 1024
-USER_AGENT = "AIFME-Scout-OSS/0.0.0"
+USER_AGENT = "AIFME-Scout-OSS/1.0.0-rc1"
 
 
 class ScannerError(ScoutError):
@@ -85,8 +85,13 @@ class ScannerService:
     - Structured error reporting
     """
 
-    def __init__(self, config: Configuration | None = None) -> None:
+    def __init__(
+        self,
+        config: Configuration | None = None,
+        user_agent: str = USER_AGENT,
+    ) -> None:
         self._config = config
+        self._user_agent = user_agent
         self._logger = get_logger(__name__)
         self._last_fetch_time: float = 0.0
 
@@ -152,7 +157,7 @@ class ScannerService:
     async def _fetch_page(self, url: str, options: ScanOptions) -> RawPage:
         """Fetch a single page and return transport metadata."""
         headers = {
-            "User-Agent": USER_AGENT,
+            "User-Agent": self._user_agent,
             "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8",
         }
 
@@ -219,7 +224,11 @@ class ScannerService:
         self._last_fetch_time = asyncio.get_event_loop().time()
 
 
-def scan(url: str, options: ScanOptions | None = None) -> RawSite:
+def scan(
+    url: str,
+    options: ScanOptions | None = None,
+    user_agent: str = USER_AGENT,
+) -> RawSite:
     """Synchronous wrapper for the scanner service."""
-    service = ScannerService()
+    service = ScannerService(user_agent=user_agent)
     return asyncio.run(service.scan(url, options))

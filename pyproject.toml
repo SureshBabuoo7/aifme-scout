@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aifme-scout"
-version = "0.0.0"
+version = "1.0.0-rc1"
 description = "AIFME Scout OSS - open-source website and marketing intelligence toolkit"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -24,8 +24,11 @@ classifiers = [
 ]
 dependencies = [
     "beautifulsoup4>=4.12.0",
+    "fastapi>=0.100.0",
     "httpx>=0.27.0",
+    "jsonschema>=4.21.0",
     "pyyaml>=6.0",
+    "uvicorn>=0.27.0",
 ]
 
 [project.optional-dependencies]
@@ -45,6 +48,9 @@ dev = [
 Homepage = "https://github.com/aifme/aifme-scout"
 Documentation = "https://github.com/aifme/aifme-scout/blob/main/README.md"
 Repository = "https://github.com/aifme/aifme-scout"
+
+[project.scripts]
+aifme-scout = "aifme_scout.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aifme_scout"]
