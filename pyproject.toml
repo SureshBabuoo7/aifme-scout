@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aifme-scout"
-version = "1.0.0-rc2"
+version = "1.0.0rc2"
 description = "AIFME Scout OSS - open-source website and marketing intelligence toolkit"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -45,9 +45,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/aifme/aifme-scout"
-Documentation = "https://github.com/aifme/aifme-scout/blob/main/README.md"
-Repository = "https://github.com/aifme/aifme-scout"
+Homepage = "https://github.com/SureshBabuoo7/aifme-scout"
+Documentation = "https://github.com/SureshBabuoo7/aifme-scout/blob/master/README.md"
+Repository = "https://github.com/SureshBabuoo7/aifme-scout"
 
 [project.scripts]
 aifme-scout = "aifme_scout.cli:main"

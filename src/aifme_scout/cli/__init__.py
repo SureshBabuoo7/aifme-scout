@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--version",
         action="version",
-        version="%(prog)s 1.0.0-rc2",
+        version="%(prog)s 1.0.0rc2",
     )
 
     subparsers = parser.add_subparsers(dest="command")
