@@ -1,11 +1,11 @@
 # Default owner for all files
-* @aifme/core
+* @SureshBabuoo7
 
 # Source code ownership
-/src/cli/ @aifme/core
-/src/api/ @aifme/core
-/src/engine/ @aifme/core
-/src/scanner/ @aifme/core
-/src/extractors/ @aifme/core
-/src/exporters/ @aifme/core
-/src/utils/ @aifme/core
+/src/cli/ @SureshBabuoo7
+/src/api/ @SureshBabuoo7
+/src/engine/ @SureshBabuoo7
+/src/scanner/ @SureshBabuoo7
+/src/extractors/ @SureshBabuoo7
+/src/exporters/ @SureshBabuoo7
+/src/utils/ @SureshBabuoo7

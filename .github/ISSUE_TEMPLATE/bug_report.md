@@ -15,7 +15,7 @@ A clear and concise description of what the bug is.
 
 Steps to reproduce the behavior:
 
-1. Run `aifme-scout scan 'https://www.python.org'`
+1. Run `aifme-scout scan https://www.python.org`
 2. With options `--timeout 10`
 3. Observe error
 
