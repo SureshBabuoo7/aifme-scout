@@ -7,7 +7,7 @@ authors:
     orcid: "https://orcid.org/0000-0000-0000-0000"
 repository-code: "https://github.com/SureshBabuoo7/aifme-scout"
 url: "https://github.com/SureshBabuoo7/aifme-scout"
-version: "1.0.0-rc2"
+version: "1.0.0rc3"
 date-released: "2026-08-03"
 license: "Apache-2.0"
 keywords:

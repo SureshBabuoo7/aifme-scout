@@ -1,7 +1,7 @@
 # Scout OSS Maintenance Policy
 
 **Effective:** 2026-08-04  
-**Baseline:** v1.0.0-rc3  
+**Baseline:** v1.0.0rc3  
 **Branch:** `scout-oss/rc3-maintenance`
 
 ## Freeze Status

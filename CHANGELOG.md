@@ -63,3 +63,63 @@
 - `jsonschema` type stubs are not installed, causing one mypy import-untyped warning in `extractors/schema.py`
 - No plugin system (community extensions should use the `extensions` namespace in JSON output)
 - No diagrams in architecture documentation (text descriptions only)
+
+## 1.0.0-rc2
+
+### Added
+
+- Improved technology detection rules for GitHub, Primer CSS, Turbo/Hotwire, jQuery, Adobe Helix, Zoho, Astro, Cloudflare, and OneTrust
+- Developer-tools heuristic category for competitor discovery
+- Brotli decompression fallback for improved scanner reliability
+
+### Fixed
+
+- Competitor page assignment in discovery logic
+- Social discovery relative URL resolution
+
+### Changed
+
+- Redesigned README with badges, screenshots, and improved structure
+- Added issue templates and PR template
+- Updated project metadata for public launch
+
+### Known Limitations
+
+- LLM-backed summary generation is not implemented; template-based summary is used in all cases
+- No authentication, persistence, rate limiting, or background jobs
+- This is a release candidate; API and schema may change before final `1.0.0`
+- `jsonschema` type stubs are not installed, causing one mypy import-untyped warning
+- No plugin system (community extensions should use the `extensions` namespace)
+- Anti-bot protected sites may return challenge pages instead of actual HTML
+- Competitor heuristic discovery requires an explicit `target_classification` parameter
+- Technology detection is rule-based and may not detect custom or internal frameworks
+
+## 1.0.0rc3
+
+### Fixed
+
+- Critical packaging bug: embedded JSON schema in wheel for installed-package compatibility
+- Removed filesystem-based schema loading fallback; schema now loads exclusively via `importlib.resources`
+- Fixed README badge rendering (Markdown image syntax converted to HTML for GitHub compatibility)
+- Fixed GitHub repository URLs in README, SUPPORT.md, and pyproject.toml
+- Fixed nested HTML tags and duplicate horizontal rules in README
+- Fixed CODEOWNERS to reference actual GitHub user
+
+### Changed
+
+- Bumped version from `1.0.0-rc2` to `1.0.0rc3` for PEP 440 compliance
+- Updated classifier from Pre-Alpha to Beta
+- Redesigned Markdown report for business users with health score, executive summary, and missing data explanations
+- Added maintenance mode notice to README
+- Added MAINTENANCE.md with P0/P1 + security-only policy
+
+### Known Limitations
+
+- LLM-backed summary generation is not implemented; template-based summary is used in all cases
+- No authentication, persistence, rate limiting, or background jobs
+- This is a release candidate; API and schema may change before final `1.0.0`
+- `jsonschema` type stubs are not installed, causing one mypy import-untyped warning
+- No plugin system (community extensions should use the `extensions` namespace)
+- Anti-bot protected sites may return challenge pages instead of actual HTML
+- Competitor heuristic discovery requires an explicit `target_classification` parameter
+- Technology detection is rule-based and may not detect custom or internal frameworks

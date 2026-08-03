@@ -1,17 +1,17 @@
-# Release Notes: AIFME Scout OSS v1.0.0-rc2
+# Release Notes: AIFME Scout OSS v1.0.0rc3
 
-**Release Candidate 2 — August 3, 2026**
+**Release Candidate 3 — August 4, 2026**
 
-AIFME Scout OSS is the free, open-source, self-hosted entry point into AIFME's marketing-intelligence capability. This release makes Scout OSS publicly available for the first time.
+AIFME Scout OSS is the free, open-source, self-hosted entry point into AIFME's marketing-intelligence capability.
 
 ## Highlights
 
-- **Improved Technology Detection**: Added detection rules for GitHub, Primer CSS, Turbo/Hotwire, jQuery, Adobe Helix, Zoho, Astro, Cloudflare, and OneTrust
-- **Competitor Discovery Fixes**: Added developer-tools heuristic category and fixed competitor page assignment
-- **Social Discovery Improvements**: Fixed relative URL resolution
-- **Scanner Reliability**: Added Brotli decompression fallback for sites like vercel.com
-- **Professional Repository**: Redesigned README, added badges, screenshots, issue templates, and PR template
-- **Version Bump**: Runtime version updated to `1.0.0-rc2`
+- **Packaging Fix**: Embedded JSON schema in wheel for installed-package compatibility
+- **Schema Loading**: Removed filesystem-based fallback; schema now loads exclusively via `importlib.resources`
+- **README Fixes**: Fixed badge rendering, repository URLs, nested HTML tags, and duplicate horizontal rules
+- **Report Redesign**: Completely redesigned Markdown report for business users with health score, executive summary, and missing data explanations
+- **Maintenance Mode**: Added maintenance mode notice and MAINTENANCE.md with P0/P1 + security-only policy
+- **Version Bump**: Updated to `1.0.0rc3` for PEP 440 compliance
 
 ## Installation
 
@@ -40,7 +40,7 @@ None. This is a release candidate. API and schema may change before final `1.0.0
 - This is a release candidate; API and schema may change before final `1.0.0`
 - `jsonschema` type stubs are not installed, causing one mypy import-untyped warning
 - No plugin system (community extensions should use the `extensions` namespace)
-- Anti-bot protected sites (e.g., openai.com, docker.com) may return challenge pages instead of actual HTML, resulting in minimal extracted evidence. This is expected behavior.
+- Anti-bot protected sites may return challenge pages instead of actual HTML
 - Competitor heuristic discovery requires an explicit `target_classification` parameter
 - Technology detection is rule-based and may not detect custom or internal frameworks
 
@@ -56,3 +56,5 @@ See [CHANGELOG.md](./CHANGELOG.md) for the complete history.
 - [Code of Conduct](./CODE_OF_CONDUCT.md)
 - [FAQ](./FAQ.md)
 - [Roadmap](./ROADMAP.md)
+- [Support](./SUPPORT.md)
+- [Maintenance](./MAINTENANCE.md)

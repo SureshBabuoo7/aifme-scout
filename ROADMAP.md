@@ -11,12 +11,12 @@ The full milestone specifications, dependency graph, and freeze policy are defin
 - Scout OSS Architecture v1.0
 
 | Milestone | Name | Status |
-|---|---|---|
-| EXEC-01 | Repository Foundation | In Progress |
-| EXEC-02 | Development Environment | Pending |
-| EXEC-03 | Core Infrastructure | Pending |
-| EXEC-04 | Website Scanner | Pending |
-| EXEC-05 | HTML Parser | Pending |
+|---|---|
+| EXEC-01 | Repository Foundation | Done |
+| EXEC-02 | Development Environment | Done |
+| EXEC-03 | Core Infrastructure | Done |
+| EXEC-04 | Website Scanner | Done |
+| EXEC-05 | HTML Parser | Done |
 | EXEC-06 | SEO Extractor | Done |
 | EXEC-07 | Metadata Extractor | Done |
 | EXEC-08 | Technology Detector | Done |
@@ -24,13 +24,13 @@ The full milestone specifications, dependency graph, and freeze policy are defin
 | EXEC-10 | Social Discovery | Done |
 | EXEC-11 | Competitor Discovery | Done |
 | EXEC-12 | Evidence Collector | Done |
-| EXEC-13 | Schema Builder | Pending |
-| EXEC-14 | Summary Builder | Pending |
-| EXEC-15 | JSON Exporter | Pending |
-| EXEC-16 | Markdown Exporter | Pending |
-| EXEC-17 | CLI | Pending |
-| EXEC-18 | REST API | Pending |
-| EXEC-19 | Testing Completion | Pending |
-| EXEC-20 | Documentation Completion | Pending |
-| EXEC-21 | Release Candidate | Pending |
-| EXEC-22 | Public Launch | Pending |
+| EXEC-13 | Schema Builder | Done |
+| EXEC-14 | Summary Builder | Done |
+| EXEC-15 | JSON Exporter | Done |
+| EXEC-16 | Markdown Exporter | Done |
+| EXEC-17 | CLI | Done |
+| EXEC-18 | REST API | Done |
+| EXEC-19 | Testing Completion | Done |
+| EXEC-20 | Documentation Completion | Done |
+| EXEC-21 | Release Candidate | Done |
+| EXEC-22 | Public Launch | Done |
