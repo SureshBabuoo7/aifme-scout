@@ -12,6 +12,7 @@
   [![PyPI](https://img.shields.io/badge/pypi-v1.0.0--rc2-orange.svg)](https://pypi.org/project/aifme-scout/)
   [![Code style](https://img.shields.io/badge/code%20style-black-black.svg)](https://github.com/psf/black)
   [![Ruff](https://img.shields.io/badge/lint-ruff-green.svg)](https://docs.astral.sh/ruff/)
+  [![CI](https://github.com/aifme/aifme-scout/actions/workflows/ci.yml/badge.svg)](https://github.com/aifme/aifme-scout/actions/workflows/ci.yml)
 </p>
 
 ---
@@ -112,10 +113,10 @@ pre-commit install
 
 ```bash
 # Basic scan
-aifme-scout scan https://example.com
+aifme-scout scan https://www.python.org
 
 # Or run as a module
-python -m aifme_scout scan https://example.com
+python -m aifme_scout scan https://www.python.org
 ```
 
 Output files are written to the current directory:
@@ -136,57 +137,27 @@ Interactive documentation:
 
 ## Screenshots
 
-> **Note:** Replace these placeholders with actual screenshots of the CLI output, JSON report, and Markdown report.
-
 ### CLI Output
 
-```
-$ aifme-scout scan https://example.com
+<img src="assets/screenshots/cli-output.png" alt="CLI Output" width="800">
 
-[INFO] Scanning https://example.com
-[INFO] Parsing HTML
-[INFO] Extracting SEO signals
-[INFO] Detecting technologies
-[INFO] Discovering social profiles
-[INFO] Building schema
-[INFO] Exporting to JSON and Markdown
-[INFO] Scan complete. Results written to ./scan-result.json and ./report.md
-```
+### Swagger UI
+
+<img src="assets/screenshots/swagger-ui.png" alt="Swagger UI" width="800">
 
 ### JSON Report Sample
 
-```json
-{
-  "meta": {
-    "schema_version": "1.0.0",
-    "engine_version": "1.0.0-rc2",
-    "timestamp": "2026-08-03T12:00:00+00:00"
-  },
-  "site": {
-    "url": "https://example.com",
-    "target_url": "https://example.com"
-  },
-  "diagnostics": {
-    "total_evidence_items": 9,
-    "seo_items": 4,
-    "metadata_items": 1,
-    "technology_items": 0,
-    "content_items": 4,
-    "social_items": 0,
-    "competitor_items": 0
-  }
-}
-```
+<img src="assets/screenshots/json-output.png" alt="JSON Report" width="800">
 
 ### Markdown Report Sample
 
-```markdown
+<img src="assets/screenshots/markdown-report.png" alt="Markdown Report" width="800">
 ## Executive Summary
-Target site: https://example.com
+Target site: https://www.python.org
 Evidence items collected: 9
 
 ## Website Overview
-URL: https://example.com
+URL: https://www.python.org
 Schema version: 1.0.0
 
 ## SEO Summary

@@ -42,7 +42,7 @@ the pipeline stage sequence, and assembles the final result.
 from aifme_scout.engine.request_handler import handle
 from aifme_scout.utils.models import ScanRequest
 
-request = ScanRequest(target_url="https://example.com")
+request = ScanRequest(target_url="https://www.python.org")
 result = handle(request)
 ```
 
@@ -85,7 +85,7 @@ It reuses the existing `RequestHandler.handle()` for pipeline orchestration.
 
 ```json
 {
-  "url": "https://example.com",
+  "url": "https://www.python.org",
   "output": "both",
   "timeout": 10.0,
   "user_agent": "AIFME-Scout-OSS/1.0.0-rc2",

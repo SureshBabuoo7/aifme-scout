@@ -15,7 +15,7 @@ is installed.
 Scan a website and produce JSON and/or Markdown output.
 
 ```bash
-aifme-scout scan https://example.com
+aifme-scout scan https://www.python.org
 ```
 
 ### `aifme-scout --help`
@@ -46,37 +46,37 @@ Print version and exit.
 ### Basic scan
 
 ```bash
-aifme-scout scan https://example.com
+aifme-scout scan https://www.python.org
 ```
 
 ### JSON output only
 
 ```bash
-aifme-scout scan https://example.com --output json --out ./reports
+aifme-scout scan https://www.python.org --output json --out ./reports
 ```
 
 ### Markdown output only
 
 ```bash
-aifme-scout scan https://example.com --output markdown --out ./reports
+aifme-scout scan https://www.python.org --output markdown --out ./reports
 ```
 
 ### Custom timeout and user agent
 
 ```bash
-aifme-scout scan https://example.com --timeout 30 --user-agent "MyBot/1.0"
+aifme-scout scan https://www.python.org --timeout 30 --user-agent "MyBot/1.0"
 ```
 
 ### Verbose mode
 
 ```bash
-aifme-scout scan https://example.com --verbose
+aifme-scout scan https://www.python.org --verbose
 ```
 
 ### Quiet mode
 
 ```bash
-aifme-scout scan https://example.com --quiet
+aifme-scout scan https://www.python.org --quiet
 ```
 
 ## Exit Codes
