@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aifme-scout"
-version = "1.0.0rc2"
+version = "1.0.0rc3"
 description = "AIFME Scout OSS - open-source website and marketing intelligence toolkit"
 readme = "README.md"
 license = {text = "Apache-2.0"}

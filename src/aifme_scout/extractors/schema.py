@@ -11,7 +11,6 @@ import importlib.resources
 import json
 from dataclasses import asdict, is_dataclass
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from aifme_scout.extractors.models import (
@@ -27,14 +26,8 @@ if TYPE_CHECKING:
 
 
 _SCHEMA_VERSION = "1.0.0"
-_ENGINE_VERSION = "1.0.0-rc2"
+_ENGINE_VERSION = "1.0.0rc3"
 _SCHEMA_RESOURCE = ("schemas", "v1", "scan-result.schema.json")
-_BACKUP_SCHEMA_PATH = (
-    Path(__file__).resolve().parent.parent.parent.parent
-    / "schemas"
-    / "v1"
-    / "scan-result.schema.json"
-)
 
 
 def _utc_timestamp() -> str:
@@ -67,13 +60,9 @@ def _dataclass_to_dict(obj: Any) -> Any:
 
 
 def _load_schema() -> dict[str, Any]:
-    """Load the canonical JSON Schema from package resources or disk."""
-    try:
-        data = importlib.resources.files("aifme_scout").joinpath(*_SCHEMA_RESOURCE).read_text(encoding="utf-8")
-        return json.loads(data)  # type: ignore[no-any-return]
-    except (FileNotFoundError, ModuleNotFoundError):
-        with _BACKUP_SCHEMA_PATH.open("r", encoding="utf-8") as fh:
-            return json.load(fh)  # type: ignore[no-any-return]
+    """Load the canonical JSON Schema from package resources."""
+    data = importlib.resources.files("aifme_scout").joinpath(*_SCHEMA_RESOURCE).read_text(encoding="utf-8")
+    return json.loads(data)  # type: ignore[no-any-return]
 
 
 def validate(schema_obj: ScoutSchema) -> None:
