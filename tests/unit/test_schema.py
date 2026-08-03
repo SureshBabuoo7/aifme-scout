@@ -86,7 +86,7 @@ class TestSchemaConstruction:
         schema = build_schema(collection)
         assert schema.site.url == "https://example.com"
         assert schema.meta.schema_version == "1.0.0"
-        assert schema.meta.engine_version == "1.0.0-rc2"
+        assert schema.meta.engine_version == "1.0.0rc3"
         assert schema.meta.timestamp is not None
 
     def test_schema_version_present(self) -> None:
@@ -253,7 +253,7 @@ class TestSchemaValidation:
         from aifme_scout.extractors.schema import validate as _validate
 
         broken = ScoutSchema(
-            meta=ScoutMeta(schema_version="1.0.0", engine_version="1.0.0-rc2", timestamp=""),
+            meta=ScoutMeta(schema_version="1.0.0", engine_version="1.0.0rc3", timestamp=""),
             site=ScoutSite(url="", target_url=""),
             seo=[],
             metadata=[],
@@ -274,7 +274,7 @@ class TestSchemaValidation:
         from aifme_scout.extractors.schema import validate as _validate
 
         broken = ScoutSchema(
-            meta=ScoutMeta(schema_version="1.0.0", engine_version="1.0.0-rc2", timestamp=""),
+            meta=ScoutMeta(schema_version="1.0.0", engine_version="1.0.0rc3", timestamp=""),
             site=ScoutSite(url="https://example.com", target_url="https://example.com"),
             seo=[],
             metadata=[],
@@ -350,7 +350,7 @@ class TestFullPipelineValidation:
         )
         schema = build_schema(evidence)
         assert schema.meta.schema_version == "1.0.0"
-        assert schema.meta.engine_version == "1.0.0-rc2"
+        assert schema.meta.engine_version == "1.0.0rc3"
         assert schema.site.url == "https://example.com"
         assert schema.diagnostics["total_evidence_items"] > 0
         validate_schema(schema)
