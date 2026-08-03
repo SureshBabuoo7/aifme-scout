@@ -3,11 +3,11 @@
 ## Questions
 
 For general questions and discussions, please use
-[GitHub Discussions](https://github.com/aifme/aifme-scout/discussions).
+[GitHub Discussions](https://github.com/SureshBabuoo7/aifme-scout/discussions).
 
 ## Bugs
 
-Report bugs via [GitHub Issues](https://github.com/aifme/aifme-scout/issues).
+Report bugs via [GitHub Issues](https://github.com/SureshBabuoo7/aifme-scout/issues).
 
 ## Response Times
 

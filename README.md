@@ -2,17 +2,21 @@
   <img src="assets/logo.svg" alt="AIFME Scout OSS Logo" width="200">
 </p>
 
+<h1 align="center">AIFME Scout OSS</h1>
+
 <p align="center">
-  <h1>AIFME Scout OSS</h1>
-  <p><strong>Open-source website and marketing intelligence toolkit</strong></p>
-  <p>Point it at a URL; get a structured, evidence-linked snapshot of what a business is, how its site is built, and how it compares to named competitors.</p>
-  
+  <strong>Open-source website and marketing intelligence toolkit</strong>
+  <br>
+  Point it at a URL; get a structured, evidence-linked snapshot of what a business is, how its site is built, and how it compares to named competitors.
+</p>
+
+<p align="center">
   [![Python](https://img.shields.io/badge/python-%3E%3D3.11-blue.svg)](https://www.python.org/downloads/)
   [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
   [![PyPI](https://img.shields.io/badge/pypi-v1.0.0--rc2-orange.svg)](https://pypi.org/project/aifme-scout/)
   [![Code style](https://img.shields.io/badge/code%20style-black-black.svg)](https://github.com/psf/black)
   [![Ruff](https://img.shields.io/badge/lint-ruff-green.svg)](https://docs.astral.sh/ruff/)
-  [![CI](https://github.com/aifme/aifme-scout/actions/workflows/ci.yml/badge.svg)](https://github.com/aifme/aifme-scout/actions/workflows/ci.yml)
+  [![CI](https://github.com/SureshBabuoo7/aifme-scout/actions/workflows/ci.yml/badge.svg)](https://github.com/SureshBabuoo7/aifme-scout/actions/workflows/ci.yml)
 </p>
 
 ---
@@ -97,7 +101,7 @@ pip install aifme-scout
 ### Editable Install (Development)
 
 ```bash
-git clone https://github.com/aifme/aifme-scout.git
+git clone https://github.com/SureshBabuoo7/aifme-scout.git
 cd aifme-scout
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
@@ -152,24 +156,6 @@ Interactive documentation:
 ### Markdown Report Sample
 
 <img src="assets/screenshots/markdown-report.png" alt="Markdown Report" width="800">
-## Executive Summary
-Target site: https://www.python.org
-Evidence items collected: 9
-
-## Website Overview
-URL: https://www.python.org
-Schema version: 1.0.0
-
-## SEO Summary
-Title: Example Domain
-Meta Description: (none)
-Canonical: (none)
-
-## Content Summary
-- Heading: Example Domain
-- Paragraph: Learn more
-- Link: IANA (https://iana.org/domains/example)
-```
 
 ---
 
@@ -329,7 +315,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for de
 ## Development Setup
 
 ```bash
-git clone https://github.com/aifme/aifme-scout.git
+git clone https://github.com/SureshBabuoo7/aifme-scout.git
 cd aifme-scout
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate

@@ -67,3 +67,4 @@ dmypy.json
 cython_debug/
 .idea/
 .vscode/
+EXEC-*_VERIFICATION_REPORT.md
