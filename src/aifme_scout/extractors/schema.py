@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 _SCHEMA_VERSION = "1.0.0"
-_ENGINE_VERSION = "1.0.0-rc1"
+_ENGINE_VERSION = "1.0.0-rc2"
 _SCHEMA_PATH = (
     Path(__file__).resolve().parent.parent.parent.parent
     / "schemas"

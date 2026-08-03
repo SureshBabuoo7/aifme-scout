@@ -198,4 +198,4 @@ class HealthStatus:
     """Health check response."""
 
     status: str = "ok"
-    version: str = "1.0.0-rc1"
+    version: str = "1.0.0-rc2"

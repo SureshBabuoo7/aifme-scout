@@ -26,7 +26,7 @@ def _make_scan_result() -> ScanResult:
     return ScanResult(
         meta=Meta(
             schema_version="1.0.0",
-            engine_version="1.0.0-rc1",
+            engine_version="1.0.0-rc2",
             timestamp="2024-01-01T00:00:00+00:00",
         ),
         target=Website(url="https://example.com"),

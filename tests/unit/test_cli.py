@@ -22,7 +22,7 @@ def _make_schema(target_url: str = "https://example.com") -> ScoutSchema:
     return ScoutSchema(
         meta=ScoutMeta(
             schema_version="1.0.0",
-            engine_version="1.0.0-rc1",
+            engine_version="1.0.0-rc2",
             timestamp="2024-01-01T00:00:00+00:00",
         ),
         site=ScoutSite(url=target_url, target_url=target_url),

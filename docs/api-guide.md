@@ -88,7 +88,7 @@ It reuses the existing `RequestHandler.handle()` for pipeline orchestration.
   "url": "https://example.com",
   "output": "both",
   "timeout": 10.0,
-  "user_agent": "AIFME-Scout-OSS/1.0.0-rc1",
+  "user_agent": "AIFME-Scout-OSS/1.0.0-rc2",
   "mode": "no-llm"
 }
 ```

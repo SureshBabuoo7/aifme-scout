@@ -48,7 +48,7 @@ def _make_schema(
     return ScoutSchema(
         meta=ScoutMeta(
             schema_version="1.0.0",
-            engine_version="1.0.0-rc1",
+            engine_version="1.0.0-rc2",
             timestamp="2024-01-01T00:00:00+00:00",
         ),
         site=ScoutSite(url=target_url, target_url=target_url),
@@ -295,7 +295,7 @@ class TestRoundTripSerialization:
         result = export(schema)
         data = json.loads(result)
         assert data["meta"]["schema_version"] == "1.0.0"
-        assert data["meta"]["engine_version"] == "1.0.0-rc1"
+        assert data["meta"]["engine_version"] == "1.0.0-rc2"
         assert data["meta"]["timestamp"] == "2024-01-01T00:00:00+00:00"
 
     def test_round_trip_preserves_site(self) -> None:

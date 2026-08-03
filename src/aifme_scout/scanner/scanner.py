@@ -25,7 +25,7 @@ from aifme_scout.utils.models import ScanError as ModelScanError
 
 MAX_REDIRECTS = 10
 MAX_RESPONSE_SIZE_BYTES = 10 * 1024 * 1024
-USER_AGENT = "AIFME-Scout-OSS/1.0.0-rc1"
+USER_AGENT = "AIFME-Scout-OSS/1.0.0-rc2"
 
 
 class ScannerError(ScoutError):

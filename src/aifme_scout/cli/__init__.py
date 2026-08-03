@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--version",
         action="version",
-        version="%(prog)s 1.0.0-rc1",
+        version="%(prog)s 1.0.0-rc2",
     )
 
     subparsers = parser.add_subparsers(dest="command")
@@ -130,7 +130,7 @@ def _run_scan(args: argparse.Namespace) -> int:
 
     scan_mode = ScanMode(args.mode)
     timeout = args.timeout if args.timeout is not None else 10.0
-    user_agent = args.user_agent if args.user_agent is not None else "AIFME-Scout-OSS/1.0.0-rc1"
+    user_agent = args.user_agent if args.user_agent is not None else "AIFME-Scout-OSS/1.0.0-rc2"
 
     try:
         raw_site = _run_scanner(args.url, cfg, timeout, user_agent)

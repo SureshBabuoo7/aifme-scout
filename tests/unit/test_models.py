@@ -40,7 +40,7 @@ def test_version_is_frozen() -> None:
 
 
 def test_meta_default_timestamp() -> None:
-    meta = Meta(schema_version="1.0.0", engine_version="1.0.0-rc1")
+    meta = Meta(schema_version="1.0.0", engine_version="1.0.0-rc2")
     assert meta.timestamp.endswith("Z")
 
 
@@ -64,7 +64,7 @@ def test_scan_request_with_competitors() -> None:
 
 def test_scan_result_defaults() -> None:
     target = Website(url="https://example.com")
-    meta = Meta(schema_version="1.0.0", engine_version="1.0.0-rc1")
+    meta = Meta(schema_version="1.0.0", engine_version="1.0.0-rc2")
     result = ScanResult(meta=meta, target=target)
     assert result.competitors == []
     assert result.evidence == []
@@ -116,7 +116,7 @@ def test_scan_error_model() -> None:
 def test_health_status_defaults() -> None:
     status = HealthStatus()
     assert status.status == "ok"
-    assert status.version == "1.0.0-rc1"
+    assert status.version == "1.0.0-rc2"
 
 
 def test_social_profile_model() -> None:

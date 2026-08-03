@@ -64,7 +64,7 @@ def test_handle_returns_scan_result(
     mock_schema = ScoutSchema(
         meta=ScoutMeta(
             schema_version="1.0.0",
-            engine_version="1.0.0-rc1",
+            engine_version="1.0.0-rc2",
             timestamp="2024-01-01T00:00:00+00:00",
         ),
         site=ScoutSite(url="https://example.com", target_url="https://example.com"),

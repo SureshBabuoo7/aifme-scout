@@ -101,7 +101,7 @@ def handle(request: ScanRequest) -> ScanResult:
     raw_site = scan(
         request.target_url,
         scan_options,
-        user_agent=request.options.user_agent or "AIFME-Scout-OSS/1.0.0-rc1",
+        user_agent=request.options.user_agent or "AIFME-Scout-OSS/1.0.0-rc2",
     )
 
     parsed = parse(raw_site)
