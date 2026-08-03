@@ -55,6 +55,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.venv-smoke-test/
 .spyderproject.cfg
 .spyproject
 .ropeproject
