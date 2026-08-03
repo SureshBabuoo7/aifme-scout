@@ -13,11 +13,13 @@
 <p align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-%3E%3D3.11-blue.svg" alt="Python"></a>
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License"></a>
-  <a href="https://pypi.org/project/aifme-scout/"><img src="https://img.shields.io/badge/pypi-v1.0.0--rc2-orange.svg" alt="PyPI"></a>
+  <a href="https://pypi.org/project/aifme-scout/"><img src="https://img.shields.io/badge/pypi-v1.0.0--rc3-orange.svg" alt="PyPI"></a>
   <a href="https://github.com/psf/black"><img src="https://img.shields.io/badge/code%20style-black-black.svg" alt="Code style"></a>
   <a href="https://docs.astral.sh/ruff/"><img src="https://img.shields.io/badge/lint-ruff-green.svg" alt="Ruff"></a>
   <a href="https://github.com/SureshBabuoo7/aifme-scout/actions/workflows/ci.yml"><img src="https://github.com/SureshBabuoo7/aifme-scout/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
+
+> **Note:** Scout OSS is now in maintenance mode. Only P0/P1 bug fixes and security updates are accepted. Engineering focus has shifted back to the AIFME roadmap. See [MAINTENANCE.md](./MAINTENANCE.md) for details.
 
 ---
 
