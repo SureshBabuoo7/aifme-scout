@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" rx="80" fill="url(#grad)"/>
+  <circle cx="200" cy="160" r="70" fill="none" stroke="#0f3460" stroke-width="8"/>
+  <circle cx="200" cy="160" r="50" fill="none" stroke="#e94560" stroke-width="6"/>
+  <circle cx="200" cy="160" r="25" fill="#e94560"/>
+  <rect x="140" y="260" width="120" height="12" rx="6" fill="#0f3460"/>
+  <rect x="160" y="290" width="80" height="12" rx="6" fill="#0f3460"/>
+  <text x="200" y="350" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#ffffff" text-anchor="middle">AIFME</text>
+</svg>

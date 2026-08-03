@@ -1,29 +1,84 @@
-# AIFME Scout OSS
+<p align="center">
+  <img src="assets/logo.svg" alt="AIFME Scout OSS Logo" width="200">
+</p>
 
-AIFME Scout OSS is the free, open-source, self-hosted entry point into AIFME's marketing-intelligence capability. Point it at a URL; it returns a structured, evidence-linked snapshot of what a business is, how its site is built, what it says about itself, and how it compares to named competitors — as a CLI, a REST API, and a versioned JSON schema built for both humans and AI agents to consume.
+<p align="center">
+  <h1>AIFME Scout OSS</h1>
+  <p><strong>Open-source website and marketing intelligence toolkit</strong></p>
+  <p>Point it at a URL; get a structured, evidence-linked snapshot of what a business is, how its site is built, and how it compares to named competitors.</p>
+  
+  [![Python](https://img.shields.io/badge/python-%3E%3D3.11-blue.svg)](https://www.python.org/downloads/)
+  [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
+  [![PyPI](https://img.shields.io/badge/pypi-v1.0.0--rc2-orange.svg)](https://pypi.org/project/aifme-scout/)
+  [![Code style](https://img.shields.io/badge/code%20style-black-black.svg)](https://github.com/psf/black)
+  [![Ruff](https://img.shields.io/badge/lint-ruff-green.svg)](https://docs.astral.sh/ruff/)
+</p>
+
+---
+
+## What is Scout OSS?
+
+AIFME Scout OSS is the **free, open-source, self-hosted** entry point into AIFME's marketing-intelligence capability. It performs the **Understand** step of the AIFME model and nothing past it.
+
+- No persistent memory
+- No reasoning or decision logic
+- No ability to act on a target's behalf
+
+It is a standalone extraction toolkit that gives you a structured, evidence-linked snapshot of a website's public-facing identity — ready for humans or AI agents to consume.
+
+The commercial [AIFME Platform](https://aifme.com) includes Remember, Reason, Decide, Execute, and Measure capabilities. Scout OSS is the open-source foundation.
+
+---
 
 ## Features
 
-- **Website Scanning** — Safely fetch and analyze websites with configurable timeouts, crawl delays, and SSRF protection.
-- **HTML Parsing** — Convert raw HTML into a deterministic, navigable DOM tree with lenient recovery for malformed markup.
-- **SEO Extraction** — Extract on-page SEO signals including titles, meta descriptions, canonical URLs, heading hierarchy, Open Graph, Twitter Cards, and structured data.
-- **Metadata Extraction** — Pull structured head metadata including favicons, language, manifest links, RSS/Atom feeds, and verification tags.
-- **Technology Detection** — Identify frameworks, CMS platforms, web servers, analytics tools, and CSS frameworks with rule-based confidence.
-- **Content Extraction** — Extract structured body content including headings, paragraphs, lists, tables, images, links, buttons, forms, breadcrumbs, and footers.
-- **Social Discovery** — Find linked social profiles from parsed page links with platform detection and provenance tracking.
-- **Competitor Discovery** — Assemble competitor comparison sets from explicit declarations and user-supplied lists.
-- **Evidence Collection** — Normalize all extractor outputs into a common, traceable evidence model with deterministic IDs.
-- **Schema Validation** — Validate every scan result against a versioned JSON Schema before export.
-- **JSON Export** — Pretty-printed, schema-compliant JSON output with stable key ordering.
-- **Markdown Export** — Deterministic Markdown reports preserving all section headings and evidence references.
-- **CLI** — Full-featured command-line interface with configuration precedence, exit codes, and output control.
-- **REST API** — FastAPI-based HTTP interface with automatic OpenAPI/Swagger documentation.
+| Feature | Description |
+|---------|-------------|
+| **Website Scanning** | Safely fetch and analyze websites with configurable timeouts, crawl delays, and SSRF protection |
+| **HTML Parsing** | Convert raw HTML into a deterministic, navigable DOM tree with lenient recovery for malformed markup |
+| **SEO Extraction** | Extract on-page SEO signals: titles, meta descriptions, canonical URLs, heading hierarchy, Open Graph, Twitter Cards, structured data |
+| **Metadata Extraction** | Pull structured head metadata: favicons, language, manifest links, RSS/Atom feeds, verification tags |
+| **Technology Detection** | Identify frameworks, CMS platforms, web servers, analytics tools, and CSS frameworks with rule-based confidence |
+| **Content Extraction** | Extract structured body content: headings, paragraphs, lists, tables, images, links, buttons, forms, breadcrumbs, footers |
+| **Social Discovery** | Find linked social profiles from parsed page links with platform detection and provenance tracking |
+| **Competitor Discovery** | Assemble competitor comparison sets from explicit declarations and user-supplied lists |
+| **Evidence Collection** | Normalize all extractor outputs into a common, traceable evidence model with deterministic IDs |
+| **Schema Validation** | Validate every scan result against a versioned JSON Schema before export |
+| **JSON Export** | Pretty-printed, schema-compliant JSON output with stable key ordering |
+| **Markdown Export** | Deterministic Markdown reports preserving all section headings and evidence references |
+| **CLI** | Full-featured command-line interface with configuration precedence, exit codes, and output control |
+| **REST API** | FastAPI-based HTTP interface with automatic OpenAPI/Swagger documentation |
 
-## Why Scout OSS Exists
+---
 
-Scout OSS performs the **Understand** step of the AIFME model and nothing past it. It has no persistent memory, no reasoning or decision logic, and no ability to act on a target's behalf. It is a standalone extraction toolkit that gives you a structured, evidence-linked snapshot of a website's public-facing identity — ready for humans or AI agents to consume.
+## Architecture
 
-The commercial AIFME Platform includes Remember, Reason, Decide, Execute, and Measure capabilities. Scout OSS is the open-source foundation: the free, self-hosted way to gather and understand web intelligence.
+```mermaid
+graph LR
+    A[Website Scanner] --> B[HTML Parser]
+    B --> C[SEO Extractor]
+    B --> D[Metadata Extractor]
+    B --> E[Technology Detector]
+    B --> F[Content Extractor]
+    B --> G[Social Discovery]
+    B --> H[Competitor Discovery]
+    C --> I[Evidence Collector]
+    D --> I
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+    I --> J[Schema Builder]
+    J --> K[Summary Builder]
+    K --> L[JSON Exporter]
+    K --> M[Markdown Exporter]
+```
+
+The **Request Handler** is the single orchestration entry point for both the CLI and REST API. No pipeline logic is duplicated across interfaces.
+
+All modules are frozen, immutable, and thread-safe. The JSON Schema is versioned independently from the engine version.
+
+---
 
 ## Installation
 
@@ -49,35 +104,17 @@ pip install -e ".[dev]"
 pre-commit install
 ```
 
+---
+
 ## Quick Start
 
-### Install
+### Scan a Website
 
 ```bash
-pip install aifme-scout
-```
-
-For development:
-
-```bash
-git clone https://github.com/aifme/aifme-scout.git
-cd aifme-scout
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
-```
-
-### CLI
-
-Scan a website and generate both JSON and Markdown output:
-
-```bash
+# Basic scan
 aifme-scout scan https://example.com
-```
 
-Alternatively, run as a module:
-
-```bash
+# Or run as a module
 python -m aifme_scout scan https://example.com
 ```
 
@@ -85,158 +122,85 @@ Output files are written to the current directory:
 - `scan-result.json` — Schema-validated JSON report
 - `report.md` — Markdown summary
 
-### REST API
-
-Start the API server:
+### Start the REST API
 
 ```bash
 uvicorn aifme_scout.api.app:app --host 0.0.0.0 --port 8000
 ```
 
-Scan a website:
-
-```bash
-curl -X POST "http://localhost:8000/scan" \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://example.com"}'
-```
-
-Interactive documentation is available at:
+Interactive documentation:
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
-## CLI Examples
+---
 
-### Basic scan
+## Screenshots
 
-```bash
-aifme-scout scan https://example.com
+> **Note:** Replace these placeholders with actual screenshots of the CLI output, JSON report, and Markdown report.
+
+### CLI Output
+
+```
+$ aifme-scout scan https://example.com
+
+[INFO] Scanning https://example.com
+[INFO] Parsing HTML
+[INFO] Extracting SEO signals
+[INFO] Detecting technologies
+[INFO] Discovering social profiles
+[INFO] Building schema
+[INFO] Exporting to JSON and Markdown
+[INFO] Scan complete. Results written to ./scan-result.json and ./report.md
 ```
 
-### JSON output only
-
-```bash
-aifme-scout scan https://example.com --output json --out ./reports
-```
-
-### Markdown output only
-
-```bash
-aifme-scout scan https://example.com --output markdown --out ./reports
-```
-
-### Custom timeout and user agent
-
-```bash
-aifme-scout scan https://example.com --timeout 30 --user-agent "MyBot/1.0"
-```
-
-### Verbose mode
-
-```bash
-aifme-scout scan https://example.com --verbose
-```
-
-### Quiet mode
-
-```bash
-aifme-scout scan https://example.com --quiet
-```
-
-## REST API Examples
-
-### Health check
-
-```bash
-curl http://localhost:8000/health
-```
-
-Response:
-```json
-{
-  "status": "ok",
-  "version": "1.0.0-rc2"
-}
-```
-
-### Version
-
-```bash
-curl http://localhost:8000/version
-```
-
-### Scan with custom options
-
-```bash
-curl -X POST "http://localhost:8000/scan" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://example.com",
-    "output": "both",
-    "timeout": 15.0,
-    "user_agent": "MyBot/1.0",
-    "mode": "no-llm"
-  }'
-```
-
-## Output Formats
-
-### JSON
-
-The JSON Exporter produces a stable, pretty-printed document that validates against `schemas/v1/scan-result.schema.json`.
+### JSON Report Sample
 
 ```json
 {
   "meta": {
     "schema_version": "1.0.0",
     "engine_version": "1.0.0-rc2",
-    "timestamp": "2024-01-01T00:00:00+00:00"
+    "timestamp": "2026-08-03T12:00:00+00:00"
   },
   "site": {
     "url": "https://example.com",
     "target_url": "https://example.com"
   },
-  "seo": [],
-  "metadata": [],
-  "technology": [],
-  "content": [],
-  "social": [],
-  "competitors": [],
-  "evidence": [],
   "diagnostics": {
-    "total_evidence_items": 0,
-    "seo_items": 0,
-    "metadata_items": 0,
+    "total_evidence_items": 9,
+    "seo_items": 4,
+    "metadata_items": 1,
     "technology_items": 0,
-    "content_items": 0,
+    "content_items": 4,
     "social_items": 0,
-    "competitor_items": 0,
-    "build_timestamp": "2024-01-01T00:00:00+00:00"
+    "competitor_items": 0
   }
 }
 ```
 
-### Markdown
-
-The Markdown Exporter renders the `ScoutSummary` exactly as produced by the Summary Builder:
+### Markdown Report Sample
 
 ```markdown
 ## Executive Summary
-
 Target site: https://example.com
-Evidence items collected: 0
+Evidence items collected: 9
 
 ## Website Overview
-
 URL: https://example.com
 Schema version: 1.0.0
 
-## Diagnostics
+## SEO Summary
+Title: Example Domain
+Meta Description: (none)
+Canonical: (none)
 
-total_evidence_items: 0
-seo_items: 0
-...
+## Content Summary
+- Heading: Example Domain
+- Paragraph: Learn more
+- Link: IANA (https://iana.org/domains/example)
 ```
+
+---
 
 ## Architecture Overview
 
@@ -256,13 +220,12 @@ Scout OSS follows a deterministic, stateless pipeline:
 12. **JSON Exporter** — Serializes schema to stable JSON
 13. **Markdown Exporter** — Renders summary to Markdown
 
-The **Request Handler** is the single orchestration entry point for both the CLI and REST API.
-
-## Repository Structure
+### Repository Structure
 
 ```
 aifme-scout/
 ├── .github/              # GitHub configuration (CI, issue templates, CODEOWNERS)
+├── assets/               # Brand assets (logo, banner)
 ├── docs/                 # Documentation
 │   ├── architecture.md   # Module-level architecture documentation
 │   ├── api-guide.md      # API usage and examples
@@ -288,8 +251,109 @@ aifme-scout/
 │   │   ├── exporters/    # Output rendering
 │   │   └── utils/        # Cross-cutting helpers
 ├── scripts/              # Dev/release tooling
-└── assets/               # Static brand/media
+└── pyproject.toml        # Project configuration
 ```
+
+---
+
+## Roadmap
+
+| Milestone | Name | Status |
+|---|---|---|
+| EXEC-01 | Repository Foundation | Done |
+| EXEC-02 | Development Environment | Done |
+| EXEC-03 | Core Infrastructure | Done |
+| EXEC-04 | Website Scanner | Done |
+| EXEC-05 | HTML Parser | Done |
+| EXEC-06 | SEO Extractor | Done |
+| EXEC-07 | Metadata Extractor | Done |
+| EXEC-08 | Technology Detector | Done |
+| EXEC-09 | Content Extractor | Done |
+| EXEC-10 | Social Discovery | Done |
+| EXEC-11 | Competitor Discovery | Done |
+| EXEC-12 | Evidence Collector | Done |
+| EXEC-13 | Schema Builder | Done |
+| EXEC-14 | Summary Builder | Done |
+| EXEC-15 | JSON Exporter | Done |
+| EXEC-16 | Markdown Exporter | Done |
+| EXEC-17 | CLI | Done |
+| EXEC-18 | REST API | Done |
+| EXEC-19 | Testing Completion | Done |
+| EXEC-20 | Documentation Completion | Done |
+| EXEC-21 | Release Candidate | Done |
+| EXEC-22 | Public Launch | In Progress |
+
+See [ROADMAP.md](./ROADMAP.md) for detailed milestone specifications.
+
+---
+
+## FAQ
+
+<details>
+<summary><strong>What is Scout OSS?</strong></summary>
+
+AIFME Scout OSS is a free, open-source, self-hosted tool that scans a URL and returns a structured, evidence-linked snapshot of a business's web presence, technology stack, and marketing signals. It provides both a CLI and a REST API, with output as a versioned JSON schema.
+
+</details>
+
+<details>
+<summary><strong>How is it different from AIFME Platform?</strong></summary>
+
+Scout OSS performs the **Understand** step of the AIFME model and nothing past it. It has no persistent memory, no reasoning or decision logic, and no ability to act on a target's behalf. The AIFME Platform includes Remember, Reason, Decide, Execute, and Measure capabilities that are not part of this open-source project.
+
+</details>
+
+<details>
+<summary><strong>Why is the Brain not included?</strong></summary>
+
+The Brain is part of the commercial AIFME Platform and is outside the scope of Scout OSS. Scout OSS is a standalone extraction toolkit. It does not depend on or include any Platform-internal components.
+
+</details>
+
+<details>
+<summary><strong>What output formats are supported?</strong></summary>
+
+Scout OSS produces two output formats:
+- **JSON** — Schema-validated, pretty-printed with stable key ordering
+- **Markdown** — Deterministic reports preserving all section headings and evidence references
+
+</details>
+
+<details>
+<summary><strong>How is the JSON Schema versioned?</strong></summary>
+
+The JSON Schema is versioned independently from the engine version. The current schema version is `1.0.0`, and the engine version is `1.0.0-rc2`. Schema changes follow the [SCHEMA_CHANGELOG.md](./SCHEMA_CHANGELOG.md).
+
+</details>
+
+<details>
+<summary><strong>Can I use Scout OSS for commercial purposes?</strong></summary>
+
+Yes. Scout OSS is licensed under the [Apache License 2.0](./LICENSE), which permits commercial use, modification, distribution, and private use.
+
+</details>
+
+See [FAQ.md](./FAQ.md) for more frequently asked questions.
+
+---
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, and pull request guidelines.
+
+### Quick Contributing Guide
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-new-feature`)
+3. Make your changes
+4. Run tests (`pytest`)
+5. Run lint (`ruff check src/ tests/`)
+6. Run type check (`mypy src/`)
+7. Commit your changes (`git commit -m 'feat: add new feature'`)
+8. Push to the branch (`git push origin feature/my-new-feature`)
+9. Open a Pull Request
+
+---
 
 ## Development Setup
 
@@ -328,13 +392,7 @@ mypy src/
 black --check src/ tests/
 ```
 
-## License
-
-This project is licensed under the [Apache License 2.0](./LICENSE).
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, and pull request guidelines.
+---
 
 ## Links
 
@@ -345,3 +403,11 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, testing, and pul
 - [Support](./SUPPORT.md)
 - [FAQ](./FAQ.md)
 - [Changelog](./CHANGELOG.md)
+- [Roadmap](./ROADMAP.md)
+- [Schema Changelog](./SCHEMA_CHANGELOG.md)
+
+---
+
+<p align="center">
+  Built with ❤️ by <a href="https://aifme.com">AIFME</a>
+</p>
