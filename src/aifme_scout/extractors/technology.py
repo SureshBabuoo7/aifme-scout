@@ -365,6 +365,84 @@ def _check_script_urls(page: ParsedPage) -> list[Technology]:
             )
             continue
 
+        # jQuery
+        if "jquery" in src_lower and src_lower.endswith(".js"):
+            technologies.append(
+                Technology(
+                    name="jQuery",
+                    category="JavaScript Library",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_jquery", src, "script")],
+                )
+            )
+            continue
+
+        # Adobe Helix
+        if "helix" in src_lower:
+            technologies.append(
+                Technology(
+                    name="Adobe Helix",
+                    category="CMS",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_adobe_helix", src, "script")],
+                )
+            )
+            continue
+
+        # Zoho
+        if "zoho" in src_lower:
+            technologies.append(
+                Technology(
+                    name="Zoho",
+                    category="SaaS",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_zoho", src, "script")],
+                )
+            )
+            continue
+
+        # Astro
+        if "/_astro/" in src_lower:
+            technologies.append(
+                Technology(
+                    name="Astro",
+                    category="Framework",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_astro", src, "script")],
+                )
+            )
+            continue
+
+        # Cloudflare Insights
+        if "cloudflareinsights.com" in src_lower:
+            technologies.append(
+                Technology(
+                    name="Cloudflare Insights",
+                    category="Analytics",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_cloudflare_insights", src, "script")],
+                )
+            )
+            continue
+
+        # OneTrust
+        if "otSDKStub" in src_lower or "optanon" in src_lower:
+            technologies.append(
+                Technology(
+                    name="OneTrust",
+                    category="Compliance",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_onetrust", src, "script")],
+                )
+            )
+            continue
+
     return technologies
 
 
@@ -401,17 +479,42 @@ def _check_link_urls(page: ParsedPage) -> list[Technology]:
                 )
             )
 
+        if "primer" in href_lower:
+            technologies.append(
+                Technology(
+                    name="Primer CSS",
+                    category="CSS Framework",
+                    confidence="high",
+                    detection_method="link_url",
+                    evidence=[_evidence(page.url, "link_url_primer", href, "link")],
+                )
+            )
+
     return technologies
 
 
 def _check_http_headers(page: ParsedPage, raw_page: RawPage) -> list[Technology]:
     """Check HTTP headers for technology fingerprints."""
     technologies: list[Technology] = []
-    server = raw_page.headers.get("Server", "")
+    server = next(
+        (v for k, v in raw_page.headers.items() if k.lower() == "server"),
+        "",
+    )
     if not server:
         return technologies
 
     server_lower = server.lower()
+
+    if server_lower == "github.com":
+        technologies.append(
+            Technology(
+                name="GitHub",
+                category="Infrastructure",
+                confidence="high",
+                detection_method="http_header",
+                evidence=[_evidence(page.url, "header_server_github", server, "header")],
+            )
+        )
 
     if "nginx" in server_lower:
         technologies.append(
@@ -443,6 +546,28 @@ def _check_http_headers(page: ParsedPage, raw_page: RawPage) -> list[Technology]
                 confidence="high",
                 detection_method="http_header",
                 evidence=[_evidence(page.url, "header_server_iis", server, "header")],
+            )
+        )
+
+    if server_lower == "zgs":
+        technologies.append(
+            Technology(
+                name="Zoho",
+                category="SaaS",
+                confidence="high",
+                detection_method="http_header",
+                evidence=[_evidence(page.url, "header_server_zoho", server, "header")],
+            )
+        )
+
+    if server_lower == "cloudflare":
+        technologies.append(
+            Technology(
+                name="Cloudflare",
+                category="Infrastructure",
+                confidence="high",
+                detection_method="http_header",
+                evidence=[_evidence(page.url, "header_server_cloudflare", server, "header")],
             )
         )
 
@@ -494,6 +619,44 @@ def _check_dom_signatures(page: ParsedPage) -> list[Technology]:
     return technologies
 
 
+def _check_turbo(page: ParsedPage) -> list[Technology]:
+    """Check for Turbo/Hotwire fingerprints in meta tags and scripts."""
+    technologies: list[Technology] = []
+    root = page.root
+    head = page.head
+
+    if head is not None:
+        for meta in head.find_all("meta"):
+            name = meta.get("name") or ""
+            if "turbo" in name.lower():
+                technologies.append(
+                    Technology(
+                        name="Turbo/Hotwire",
+                        category="Framework",
+                        confidence="high",
+                        detection_method="meta_tag",
+                        evidence=[_evidence(page.url, "meta_turbo", name, "meta")],
+                    )
+                )
+                break
+
+    for script in root.find_all("script"):
+        src = script.get("src") or ""
+        if "turbo" in src.lower():
+            technologies.append(
+                Technology(
+                    name="Turbo/Hotwire",
+                    category="Framework",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_turbo", src, "script")],
+                )
+            )
+            break
+
+    return technologies
+
+
 def detect(raw_site: RawSite, parsed_site: ParsedSite) -> TechnologyResult:
     """Detect technologies from a RawSite and ParsedSite.
 
@@ -521,6 +684,7 @@ def detect(raw_site: RawSite, parsed_site: ParsedSite) -> TechnologyResult:
         if raw_page is not None:
             technologies.extend(_check_http_headers(parsed_page, raw_page))
         technologies.extend(_check_dom_signatures(parsed_page))
+        technologies.extend(_check_turbo(parsed_page))
 
         deduplicated = _deduplicate(technologies)
         pages.append(TechnologyPageResult(url=parsed_page.url, technologies=deduplicated))

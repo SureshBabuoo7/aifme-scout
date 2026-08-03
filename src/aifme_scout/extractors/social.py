@@ -110,14 +110,12 @@ def _normalize_url(url: str, base_url: str) -> str | None:
     if url.startswith("//"):
         parsed_base = urlparse(base_url)
         return f"{parsed_base.scheme}:{url}"
-    if url.startswith("/"):
-        parsed_base = urlparse(base_url)
-        return f"{parsed_base.scheme}://{parsed_base.netloc}{url}"
     if url.startswith("#"):
         return None
     if url.startswith("mailto:") or url.startswith("tel:"):
         return None
-    return None
+    parsed_base = urlparse(base_url)
+    return f"{parsed_base.scheme}://{parsed_base.netloc}/{url.lstrip('/')}"
 
 
 def discover(parsed_site: ParsedSite) -> SocialResult:

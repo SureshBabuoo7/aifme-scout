@@ -51,12 +51,34 @@ pre-commit install
 
 ## Quick Start
 
+### Install
+
+```bash
+pip install aifme-scout
+```
+
+For development:
+
+```bash
+git clone https://github.com/aifme/aifme-scout.git
+cd aifme-scout
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+```
+
 ### CLI
 
 Scan a website and generate both JSON and Markdown output:
 
 ```bash
 aifme-scout scan https://example.com
+```
+
+Alternatively, run as a module:
+
+```bash
+python -m aifme_scout scan https://example.com
 ```
 
 Output files are written to the current directory:
@@ -167,7 +189,7 @@ The JSON Exporter produces a stable, pretty-printed document that validates agai
 {
   "meta": {
     "schema_version": "1.0.0",
-    "engine_version": "0.12.0",
+    "engine_version": "1.0.0-rc2",
     "timestamp": "2024-01-01T00:00:00+00:00"
   },
   "site": {

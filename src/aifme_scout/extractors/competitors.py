@@ -106,6 +106,13 @@ _COMPETITOR_DISCOVERY_DOMAINS: dict[str, list[str]] = {
         "prestashop.com",
         "opencart.com",
     ],
+    "developer-tools": [
+        "gitlab.com",
+        "bitbucket.org",
+        "gitea.com",
+        "sourceforge.net",
+        "gitkraken.com",
+    ],
 }
 
 
@@ -169,7 +176,13 @@ def _extract_external_links(root: Element | None, base_url: str) -> list[tuple[E
             continue
         if href.startswith("#") or href.startswith("mailto:") or href.startswith("tel:"):
             continue
-        absolute = href if href.startswith("http") else f"{base_url.rstrip('/')}/{href.lstrip('/')}"
+        if href.startswith("http://") or href.startswith("https://"):
+            absolute = href
+        elif href.startswith("//"):
+            parsed_base = urlparse(base_url)
+            absolute = f"{parsed_base.scheme}:{href}"
+        else:
+            absolute = f"{base_url.rstrip('/')}/{href.lstrip('/')}"
         parsed = urlparse(absolute)
         domain = parsed.netloc.lower()
         if domain.startswith("www."):
@@ -326,6 +339,9 @@ def resolve(
         page_competitors = [c for c in deduplicated if c.source == parsed_page.url]
         if parsed_page == parsed_site.pages[0]:
             page_competitors.extend(user_competitors)
+            page_competitors.extend(
+                c for c in heuristic_competitors if c.source == "heuristic_discovery"
+            )
         pages.append(CompetitorPageResult(url=parsed_page.url, competitors=page_competitors))
 
     heuristic_status = "COMPLETED" if heuristic_competitors else "NOT_APPLICABLE"

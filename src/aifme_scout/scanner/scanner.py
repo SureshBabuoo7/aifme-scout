@@ -162,13 +162,33 @@ class ScannerService:
         }
 
         start_time = time.perf_counter()
-        async with httpx.AsyncClient(
-            follow_redirects=options.follow_redirects,
-            max_redirects=MAX_REDIRECTS,
-            timeout=httpx.Timeout(options.timeout_seconds),
-            headers=headers,
-        ) as client:
-            response = await client.get(url)
+        try:
+            async with httpx.AsyncClient(
+                follow_redirects=options.follow_redirects,
+                max_redirects=MAX_REDIRECTS,
+                timeout=httpx.Timeout(options.timeout_seconds),
+                headers=headers,
+            ) as client:
+                response = await client.get(url)
+        except Exception as exc:
+            error_message = str(exc)
+            if "brotli" in error_message.lower() and (
+                "can_accept_more_data" in error_message.lower()
+            ):
+                self._logger.warning(
+                    "Brotli decompression failed for %s, retrying without Brotli", url
+                )
+                fallback_headers = dict(headers)
+                fallback_headers["Accept-Encoding"] = "gzip, deflate"
+                async with httpx.AsyncClient(
+                    follow_redirects=options.follow_redirects,
+                    max_redirects=MAX_REDIRECTS,
+                    timeout=httpx.Timeout(options.timeout_seconds),
+                    headers=fallback_headers,
+                ) as client:
+                    response = await client.get(url)
+            else:
+                raise
 
         response_time_ms = (time.perf_counter() - start_time) * 1000.0
 

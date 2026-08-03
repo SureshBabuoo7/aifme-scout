@@ -227,6 +227,36 @@ class TestProvenance:
         assert wp.evidence[0].source == "meta"
 
 
+class TestGitHub:
+    def test_github_server_detected(self) -> None:
+        html = _load_fixture("github.html")
+        result = _parse(html, headers={"server": "github.com"})
+        assert "GitHub" in _tech_names(_get_techs(result))
+
+    def test_github_server_case_insensitive(self) -> None:
+        html = _load_fixture("github.html")
+        result = _parse(html, headers={"Server": "github.com"})
+        assert "GitHub" in _tech_names(_get_techs(result))
+
+    def test_primer_css_detected(self) -> None:
+        html = _load_fixture("github.html")
+        result = _parse(html)
+        assert "Primer CSS" in _tech_names(_get_techs(result))
+
+    def test_turbo_detected_from_meta(self) -> None:
+        html = _load_fixture("github.html")
+        result = _parse(html)
+        assert "Turbo/Hotwire" in _tech_names(_get_techs(result))
+
+    def test_github_full_stack_detected(self) -> None:
+        html = _load_fixture("github.html")
+        result = _parse(html, headers={"server": "github.com"})
+        names = _tech_names(_get_techs(result))
+        assert "GitHub" in names
+        assert "Primer CSS" in names
+        assert "Turbo/Hotwire" in names
+
+
 class TestDeterministic:
     def test_same_input_same_output(self) -> None:
         html = _load_fixture("multi-tech.html")

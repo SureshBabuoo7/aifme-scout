@@ -12,7 +12,7 @@ Scout OSS scans a URL and returns a structured, evidence-linked snapshot of what
 - **HTML Parsing** — Lenient DOM tree construction from raw HTML with encoding handling and malformed markup recovery
 - **SEO Extraction** — On-page SEO signals: titles, meta descriptions, canonical URLs, heading hierarchy, Open Graph, Twitter Cards, structured data, and indexability flags
 - **Metadata Extraction** — Structured head metadata: favicons, language, manifests, RSS/Atom feeds, verification tags, and web app capable flags
-- **Technology Detection** — Framework, CMS, web server, analytics, and CSS framework detection with rule-based confidence
+- **Technology Detection** — Framework, CMS, web server, analytics, and CSS framework detection with rule-based confidence. Detects GitHub (server header), Primer CSS (link URLs), and Turbo/Hotwire (meta tags and scripts).
 - **Content Extraction** — Structured body content: headings, paragraphs, lists, tables, images, links, buttons, forms, breadcrumbs, and footers
 - **Social Discovery** — Linked social profile detection with platform identification and provenance tracking
 - **Competitor Discovery** — Explicit competitor reference discovery and user-supplied competitor inclusion
@@ -123,6 +123,25 @@ All evidence references are preserved. No additional text is injected.
 - `jsonschema` type stubs are not installed, causing one mypy import-untyped warning
 - No plugin system (community extensions should use the `extensions` namespace)
 - No diagrams in architecture documentation
+- Anti-bot protected sites (e.g., openai.com) may return challenge pages instead of actual HTML, resulting in minimal extracted evidence. This is expected behavior — the scanner faithfully returns whatever HTML the target serves.
+- Competitor heuristic discovery requires an explicit `target_classification` parameter. Without it, only explicit competitor declarations (from comparison/alternative pages) and user-supplied competitors are discovered. For example, scanning github.com without `target_classification` returns zero competitors because GitHub's homepage does not contain explicit competitor references.
+- Technology detection is rule-based and may not detect custom or internal frameworks. GitHub's tech stack (Rails, custom JS) is partially detected via server header, CSS fingerprints, and Turbo/Hotwire meta tags, but not all technologies are identifiable from external HTML.
+
+## Bug Fixes (2026-08-03)
+
+- **Social Discovery URL normalization**: Relative URLs (e.g., `about.html`) are now resolved to absolute URLs instead of being silently dropped. Protocol-relative URLs (`//cdn.example.com/...`) were already handled correctly.
+- **Competitor Discovery URL resolution**: Protocol-relative URLs (`//competitor.com`) are now correctly resolved with the base scheme. Previously they were concatenated into invalid URLs like `https://example.com//competitor.com`.
+- **Technology Detection HTTP header case-insensitivity**: Fixed `_check_http_headers` to use case-insensitive header lookup, enabling detection of `server: github.com` and other non-standard capitalizations.
+- **Technology Detection GitHub/Primer/Turbo**: Added detection rules for GitHub server header, Primer CSS framework (via `primer-` link URLs), and Turbo/Hotwire (via `turbo-` meta tags and script URLs).
+- **Competitor Discovery heuristic assignment**: Fixed a bug where heuristic competitors were generated but never assigned to any page because their `source` was `"heuristic_discovery"` instead of a matching page URL. Heuristic competitors are now included on the first page of the scan result.
+
+## Verification
+
+- **Tests**: 428 passed, 0 failed
+- **Lint**: ruff passes on `src/` and `tests/`
+- **Type check**: mypy passes on changed files
+- **Manual verification**: `aifme-scout scan https://example.com` produces a report with real extracted evidence across SEO, Metadata, and Content sections, confirming the extraction pipeline works end-to-end on non-blocked targets.
+- **GitHub verification**: `aifme-scout scan https://github.com` now detects 3 technologies (GitHub, Primer CSS, Turbo/Hotwire). Competitor extraction returns zero for GitHub's homepage, which is expected behavior — the page does not contain explicit competitor references and heuristic discovery requires explicit `target_classification`.
 
 ## Upgrade Notes
 

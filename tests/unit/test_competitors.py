@@ -85,6 +85,21 @@ class TestExplicitDiscovery:
         assert "Competitor Two" in names
         assert "Competitor Three" in names
 
+    def test_relative_competitor_links_resolved(self) -> None:
+        html = """
+        <html>
+        <head><title>Compare Us vs Others</title></head>
+        <body>
+            <a href="https://competitor1.com">Competitor 1</a>
+            <a href="//competitor2.com">Competitor 2</a>
+        </body>
+        </html>
+        """
+        result = _parse(html, url="https://example.com")
+        urls = [c.url for c in _get_competitors(result)]
+        assert "https://competitor1.com" in urls
+        assert "https://competitor2.com" in urls
+
     def test_alternatives_page_detected(self) -> None:
         html = _load_fixture("alternatives.html")
         result = _parse(html)
@@ -186,3 +201,19 @@ class TestMissingCompetitors:
         html = "<html><body></body></html>"
         result = _parse(html)
         assert _get_competitors(result) == []
+
+
+class TestGitHubStyle:
+    def test_github_homepage_returns_zero_without_classification(self) -> None:
+        html = _load_fixture("github.html")
+        result = _parse(html)
+        assert _get_competitors(result) == []
+
+    def test_github_style_returns_competitors_with_developer_tools_classification(self) -> None:
+        html = _load_fixture("github.html")
+        raw_site = _make_raw_site(html)
+        parsed = parse(raw_site)
+        competitors = resolve_competitors(parsed, target_classification="developer-tools")
+        names = _competitor_names(_get_competitors(competitors))
+        assert "Gitlab" in names
+        assert "Bitbucket" in names

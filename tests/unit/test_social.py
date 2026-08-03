@@ -115,6 +115,12 @@ class TestRelativeLinks:
         profiles = _get_profiles(result)
         assert not any(p.url.startswith("/") for p in profiles)
 
+    def test_relative_url_resolved_to_absolute(self) -> None:
+        html = '<html><body><a href="about.html">About</a></body></html>'
+        result = _parse(html, url="https://example.com")
+        profiles = _get_profiles(result)
+        assert profiles == []
+
     def test_absolute_url_returned(self) -> None:
         html = _load_fixture("social-tech.html")
         result = _parse(html)
