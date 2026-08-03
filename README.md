@@ -11,12 +11,12 @@
 </p>
 
 <p align="center">
-  [![Python](https://img.shields.io/badge/python-%3E%3D3.11-blue.svg)](https://www.python.org/downloads/)
-  [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
-  [![PyPI](https://img.shields.io/badge/pypi-v1.0.0--rc2-orange.svg)](https://pypi.org/project/aifme-scout/)
-  [![Code style](https://img.shields.io/badge/code%20style-black-black.svg)](https://github.com/psf/black)
-  [![Ruff](https://img.shields.io/badge/lint-ruff-green.svg)](https://docs.astral.sh/ruff/)
-  [![CI](https://github.com/SureshBabuoo7/aifme-scout/actions/workflows/ci.yml/badge.svg)](https://github.com/SureshBabuoo7/aifme-scout/actions/workflows/ci.yml)
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-%3E%3D3.11-blue.svg" alt="Python"></a>
+  <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License"></a>
+  <a href="https://pypi.org/project/aifme-scout/"><img src="https://img.shields.io/badge/pypi-v1.0.0--rc2-orange.svg" alt="PyPI"></a>
+  <a href="https://github.com/psf/black"><img src="https://img.shields.io/badge/code%20style-black-black.svg" alt="Code style"></a>
+  <a href="https://docs.astral.sh/ruff/"><img src="https://img.shields.io/badge/lint-ruff-green.svg" alt="Ruff"></a>
+  <a href="https://github.com/SureshBabuoo7/aifme-scout/actions/workflows/ci.yml"><img src="https://github.com/SureshBabuoo7/aifme-scout/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
 
 ---
