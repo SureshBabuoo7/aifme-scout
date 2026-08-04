@@ -52,7 +52,7 @@ The commercial [AIFME Platform](https://aifme.com) includes Remember, Reason, De
 | **Evidence Collection** | Normalize all extractor outputs into a common, traceable evidence model with deterministic IDs |
 | **Schema Validation** | Validate every scan result against a versioned JSON Schema before export |
 | **JSON Export** | Pretty-printed, schema-compliant JSON output with stable key ordering |
-| **Markdown Export** | Deterministic Markdown reports preserving all section headings and evidence references |
+| **Markdown Export** | CEO-grade executive intelligence reports with health scores, business takeaways, and deterministic recommendations |
 | **CLI** | Full-featured command-line interface with configuration precedence, exit codes, and output control |
 | **REST API** | FastAPI-based HTTP interface with automatic OpenAPI/Swagger documentation |
 

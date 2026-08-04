@@ -1,3 +1,13 @@
+## Unreleased
+
+### Changed
+
+- Finalized CEO-grade executive intelligence report with business-friendly language, deterministic health scoring, and section-level takeaways
+- Added reusable Markdown renderer module for consistent report styling
+- Updated report wording to replace technical jargon with plain English equivalents
+- Enhanced website classification with more specific business categories
+- Updated README to reflect current report capabilities
+
 ## 1.0.0-rc1
 
 ### Added
