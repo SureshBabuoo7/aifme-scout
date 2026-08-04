@@ -57,7 +57,7 @@ class TestFullPipelineValidation:
         schema = build_schema(evidence)
         validate_schema(schema)
         assert schema.meta.schema_version == "1.0.0"
-        assert schema.meta.engine_version == "1.0.0rc3"
+        assert schema.meta.engine_version == "1.0.0"
         assert schema.site.url == "https://example.com"
         assert schema.diagnostics["total_evidence_items"] > 0
 

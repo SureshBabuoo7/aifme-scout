@@ -104,7 +104,7 @@
 - Competitor heuristic discovery requires an explicit `target_classification` parameter
 - Technology detection is rule-based and may not detect custom or internal frameworks
 
-## 1.0.0rc3
+## 1.0.0
 
 ### Fixed
 
@@ -117,7 +117,7 @@
 
 ### Changed
 
-- Bumped version from `1.0.0-rc2` to `1.0.0rc3` for PEP 440 compliance
+- Bumped version from `1.0.0-rc2` to `1.0.0` for stable release
 - Updated classifier from Pre-Alpha to Beta
 - Redesigned Markdown report for business users with health score, executive summary, and missing data explanations
 - Added maintenance mode notice to README
@@ -127,7 +127,7 @@
 
 - LLM-backed summary generation is not implemented; template-based summary is used in all cases
 - No authentication, persistence, rate limiting, or background jobs
-- This is a release candidate; API and schema may change before final `1.0.0`
+- This is a stable release; API and schema are frozen for the 1.0.x series
 - `jsonschema` type stubs are not installed, causing one mypy import-untyped warning
 - No plugin system (community extensions should use the `extensions` namespace)
 - Anti-bot protected sites may return challenge pages instead of actual HTML

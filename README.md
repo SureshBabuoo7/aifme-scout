@@ -13,7 +13,7 @@
 <p align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-%3E%3D3.11-blue.svg" alt="Python"></a>
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License"></a>
-  <a href="https://pypi.org/project/aifme-scout/"><img src="https://img.shields.io/badge/pypi-v1.0.0rc3-orange.svg" alt="PyPI"></a>
+  <a href="https://pypi.org/project/aifme-scout/"><img src="https://img.shields.io/badge/pypi-v1.0.0-orange.svg" alt="PyPI"></a>
   <a href="https://github.com/psf/black"><img src="https://img.shields.io/badge/code%20style-black-black.svg" alt="Code style"></a>
   <a href="https://docs.astral.sh/ruff/"><img src="https://img.shields.io/badge/lint-ruff-green.svg" alt="Ruff"></a>
   <a href="https://github.com/SureshBabuoo7/aifme-scout/actions/workflows/ci.yml"><img src="https://github.com/SureshBabuoo7/aifme-scout/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -281,7 +281,7 @@ Scout OSS produces two output formats:
 <details>
 <summary><strong>How is the JSON Schema versioned?</strong></summary>
 
-The JSON Schema is versioned independently from the engine version. The current schema version is `1.0.0`, and the engine version is `1.0.0rc3`. Schema changes follow the [SCHEMA_CHANGELOG.md](./SCHEMA_CHANGELOG.md).
+The JSON Schema is versioned independently from the engine version. The current schema version is `1.0.0`, and the engine version is `1.0.0`. Schema changes follow the [SCHEMA_CHANGELOG.md](./SCHEMA_CHANGELOG.md).
 
 </details>
 

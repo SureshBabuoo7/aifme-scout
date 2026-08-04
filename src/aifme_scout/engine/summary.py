@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     pass
 
 
-_VERSION = "1.0.0rc3"
+_VERSION = "1.0.0"
 _REPO_URL = "https://github.com/SureshBabuoo7/aifme-scout"
 _PYPI_URL = "https://pypi.org/project/aifme-scout/"
 

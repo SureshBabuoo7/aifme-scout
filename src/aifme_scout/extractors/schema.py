@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 _SCHEMA_VERSION = "1.0.0"
-_ENGINE_VERSION = "1.0.0rc3"
+_ENGINE_VERSION = "1.0.0"
 _SCHEMA_RESOURCE = ("schemas", "v1", "scan-result.schema.json")
 
 

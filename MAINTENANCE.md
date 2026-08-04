@@ -1,14 +1,14 @@
 # Scout OSS Maintenance Policy
 
 **Effective:** 2026-08-04  
-**Baseline:** v1.0.0rc3  
-**Branch:** `scout-oss/rc3-maintenance`
+**Baseline:** v1.0.0  
+**Branch:** `scout-oss/1.0.x-maintenance`
 
 ## Freeze Status
 
 Scout OSS is now in **maintenance mode**.
 
-From this point forward, the `scout-oss/rc3-maintenance` branch accepts only:
+From this point forward, the `scout-oss/1.0.x-maintenance` branch accepts only:
 
 - **P0/P1 bug fixes** — Critical functionality that is broken or unusable
 - **Security updates** — Vulnerabilities in dependencies or runtime behavior
@@ -30,5 +30,5 @@ Scout OSS will receive minimal maintenance attention. Community contributions ar
 
 ## Versioning
 
-- Maintenance releases will use patch versions: `1.0.0rc3`, `1.0.0rc4`, etc.
-- The `1.0.0rc3` baseline is frozen as of 2026-08-04
+- Maintenance releases will use patch versions: `1.0.0`, `1.0.1`, etc.
+- The `1.0.0` baseline is frozen as of 2026-08-04
