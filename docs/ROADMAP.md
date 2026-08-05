@@ -14,28 +14,28 @@ The full milestone specifications, dependency graph, and freeze policy are defin
 
 | Milestone | Name | Status |
 |-----------|------|--------|
-| EXEC-01 | Repository Foundation | Done |
-| EXEC-02 | Development Environment | Done |
-| EXEC-03 | Core Infrastructure | Done |
-| EXEC-04 | Website Scanner | Done |
-| EXEC-05 | HTML Parser | Done |
-| EXEC-06 | SEO Extractor | Done |
-| EXEC-07 | Metadata Extractor | Done |
-| EXEC-08 | Technology Detector | Done |
-| EXEC-09 | Content Extractor | Done |
-| EXEC-10 | Social Discovery | Done |
-| EXEC-11 | Competitor Discovery | Done |
-| EXEC-12 | Evidence Collector | Done |
-| EXEC-13 | Schema Builder | Done |
-| EXEC-14 | Summary Builder | Done |
-| EXEC-15 | JSON Exporter | Done |
-| EXEC-16 | Markdown Exporter | Done |
-| EXEC-17 | CLI | Done |
-| EXEC-18 | REST API | Done |
-| EXEC-19 | Testing Completion | Done |
-| EXEC-20 | Documentation Completion | Done |
-| EXEC-21 | Release Candidate | Done |
-| EXEC-22 | Public Launch | Done |
+| M1 | Repository Foundation | Done |
+| M2 | Development Environment | Done |
+| M3 | Core Infrastructure | Done |
+| M4 | Website Scanner | Done |
+| M5 | HTML Parser | Done |
+| M6 | SEO Extractor | Done |
+| M7 | Metadata Extractor | Done |
+| M8 | Technology Detector | Done |
+| M9 | Content Extractor | Done |
+| M10 | Social Discovery | Done |
+| M11 | Competitor Discovery | Done |
+| M12 | Evidence Collector | Done |
+| M13 | Schema Builder | Done |
+| M14 | Summary Builder | Done |
+| M15 | JSON Exporter | Done |
+| M16 | Markdown Exporter | Done |
+| M17 | CLI | Done |
+| M18 | REST API | Done |
+| M19 | Testing Completion | Done |
+| M20 | Documentation Completion | Done |
+| M21 | Release Candidate | Done |
+| M22 | Public Launch | Done |
 
 ## Future Considerations
 

@@ -185,4 +185,4 @@ The report date uses calendar date only (deterministic within a single day). Tim
 
 - [JSON Reference](JSON_REFERENCE.md) — JSON schema documentation
 - [Schema](schema.md) — Complete schema reference
-- [Examples](examples/) — Sample reports for real websites
+- [Examples](../examples/) — Sample reports for real websites

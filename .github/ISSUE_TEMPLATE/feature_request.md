@@ -39,5 +39,5 @@ Add any other context, mockups, or examples about the feature request here.
 ## Checklist
 
 - [ ] I have searched existing issues for duplicates
-- [ ] I have checked the [ROADMAP](./ROADMAP.md) to see if this is already planned
+- [ ] I have checked the [ROADMAP](../../ROADMAP.md) to see if this is already planned
 - [ ] I have described the use case clearly

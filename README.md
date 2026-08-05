@@ -37,6 +37,25 @@ It performs the **Understand** step of the AIFME model and nothing past it: no p
 
 ---
 
+## Maintenance Status
+
+AIFME Scout OSS has reached feature-complete status as of v1.0.0.
+
+Future updates will focus on:
+
+- **Bug fixes** — P0/P1 critical issues only
+- **Security updates** — Dependency patches and vulnerability fixes
+- **Compatibility** — Python version and dependency updates
+- **Documentation** — Corrections and clarifications
+
+New capabilities will be developed inside the commercial [AIFME Platform](https://aifme.com).
+
+Scout OSS is not in active development. Community contributions are welcome and will be reviewed against the maintenance criteria above.
+
+See [MAINTENANCE.md](MAINTENANCE.md) for the full policy.
+
+---
+
 ## Installation
 
 ### Prerequisites

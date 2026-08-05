@@ -46,15 +46,15 @@ None. This is a stable release. API and schema are frozen for the 1.0.x series.
 
 ## Full Changelog
 
-See [CHANGELOG.md](./CHANGELOG.md) for the complete history.
+See [CHANGELOG.md](../CHANGELOG.md) for the complete history.
 
 ## Documentation
 
-- [README](./README.md)
-- [Contributing](./CONTRIBUTING.md)
-- [Security Policy](./SECURITY.md)
-- [Code of Conduct](./CODE_OF_CONDUCT.md)
-- [FAQ](./FAQ.md)
-- [Roadmap](./ROADMAP.md)
-- [Support](./SUPPORT.md)
-- [Maintenance](./MAINTENANCE.md)
+- [README](../README.md)
+- [Contributing](../CONTRIBUTING.md)
+- [Security Policy](../SECURITY.md)
+- [Code of Conduct](../CODE_OF_CONDUCT.md)
+- [FAQ](../FAQ.md)
+- [Roadmap](../ROADMAP.md)
+- [Support](../SUPPORT.md)
+- [Maintenance](../MAINTENANCE.md)

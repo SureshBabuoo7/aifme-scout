@@ -42,4 +42,4 @@ Scout OSS is in **maintenance mode** as of v1.0.0. Only the following changes ar
 
 No new features, enhancements, or refactoring will be accepted unless required by AIFME.
 
-See [MAINTENANCE.md](MAINTENANCE.md) for the full maintenance policy.
+See [MAINTENANCE.md](../MAINTENANCE.md) for the full maintenance policy.
