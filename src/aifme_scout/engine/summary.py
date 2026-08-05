@@ -6,20 +6,33 @@ every claim from collected evidence. In LLM mode the implementation
 falls back to the same template-based summary when no provider is
 configured; LLM-backed generation is intentionally deferred to keep
 this milestone within the frozen Architecture spec.
+
+This module is presentation-only. It does not modify, add, or infer
+evidence; it formats what the scanner, parser, extractors, and evidence
+collector already produced.
 """
 
 from __future__ import annotations
 
+import re
+from collections import Counter
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 from aifme_scout.exporters.renderers import (
     bullet_list,
+    clean_text,
     hr,
+    humanize_label,
+    humanize_value,
     join_sections,
+    key_value_pairs,
+    rating,
     score_bar,
     section,
     status_badge,
     table,
+    truncate_text,
 )
 from aifme_scout.extractors.models import (
     EvidenceItem,
@@ -31,31 +44,199 @@ from aifme_scout.utils.models import Summary
 if TYPE_CHECKING:
     pass
 
-
 _VERSION = "1.0.0"
 _REPO_URL = "https://github.com/SureshBabuoo7/aifme-scout"
 _PYPI_URL = "https://pypi.org/project/aifme-scout/"
 
 _NAVIGATION_NOISE = {
-    "back to top", "menu", "reset", "smaller", "larger", "close",
-    "skip to content", "aa", "search", "toggle navigation", "toggle menu",
+    "back to top",
+    "menu",
+    "reset",
+    "smaller",
+    "larger",
+    "close",
+    "skip to content",
+    "aa",
+    "search",
+    "toggle navigation",
+    "toggle menu",
+}
+_COVERAGE_THRESHOLD = 70
+_SCAN_COVERAGE_THRESHOLD = 70
+
+_LANGUAGE_NAMES = {
+    "en": "English",
+    "es": "Spanish",
+    "fr": "French",
+    "de": "German",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "ru": "Russian",
+    "zh": "Chinese",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "nl": "Dutch",
+    "ar": "Arabic",
+    "hi": "Hindi",
+    "sv": "Swedish",
+    "pl": "Polish",
+    "tr": "Turkish",
+}
+
+_CATEGORY_EXPLANATIONS = {
+    "frontend": "User interface framework",
+    "backend": "Server-side technology",
+    "cms": "Content management system",
+    "e-commerce": "Online store platform",
+    "analytics": "Traffic analytics tool",
+    "language": "Programming language",
+    "framework": "Development framework",
+    "web-server": "Web server software",
+    "web server": "Web server software",
+    "hosting": "Hosting provider",
+    "infrastructure": "Infrastructure / delivery",
+    "security": "Security control",
+    "icon library": "Icon library",
+    "css framework": "Styling framework",
+    "saas": "SaaS platform component",
+    "crm": "Customer relationship tool",
+    "email marketing": "Email marketing tool",
+    "customer support": "Customer support tool",
+    "payment": "Payment provider",
+    "javascript library": "JavaScript library",
+    "website builder": "Website builder",
+}
+
+_DETECTION_METHOD_LABELS = {
+    "dom_signature": "DOM signature",
+    "html_comment": "HTML comment fingerprint",
+    "http_header": "HTTP response header",
+    "js_global": "JavaScript global variable",
+    "link_url": "Linked asset URL",
+    "meta_generator": "Meta generator tag",
+    "meta_tag": "Meta tag",
+    "script_url": "Script URL",
+}
+
+_CHALLENGE_TITLES = {
+    "just a moment",
+    "attention required",
+    "checking your browser",
+    "access denied",
+    "are you a human",
+    "security challenge",
+    "ddos protection",
 }
 
 
-def _get_evidence_value(item: EvidenceItem) -> str:
-    """Extract a displayable value from an evidence item."""
+def _evidence_text(item: EvidenceItem) -> str:
+    """Best human-readable string for an evidence item's value."""
+    return humanize_value(item.value, empty="")
+
+
+def _plain_text(item: EvidenceItem) -> str:
+    """Flatten an evidence value to plain text for keyword matching."""
     value = item.value
     if isinstance(value, dict):
-        parts = [f"{k}={v}" for k, v in value.items() if v]
-        return ", ".join(parts) if parts else str(value)
-    return str(value) if value is not None else ""
+        parts = [str(v) for v in value.values() if v]
+        return " ".join(parts).lower()
+    if isinstance(value, str):
+        return value.lower()
+    if isinstance(value, list):
+        return " ".join(str(v) for v in value).lower()
+    return "" if value is None else str(value).lower()
+
+
+def _collect_full_text(schema: ScoutSchema) -> str:
+    """Concatenate all evidence text for deterministic keyword analysis."""
+    parts: list[str] = []
+    for item in schema.content:
+        parts.append(_plain_text(item))
+        if item.evidence_type in ("CONTENT_HEADING", "CONTENT_PARAGRAPH"):
+            parts.append(_plain_text(item))
+    for item in schema.seo:
+        if item.evidence_type == "SEO_TITLE":
+            parts.append(_plain_text(item))
+    for item in schema.technology:
+        parts.append(_plain_text(item))
+    return " ".join(parts)
+
+
+def _detect_access_limitations(schema: ScoutSchema) -> list[str]:
+    """Detect deterministic signals of restricted scan coverage."""
+    limitations: list[str] = []
+
+    for item in schema.evidence:
+        if item.evidence_type == "ANTI_BOT_CHALLENGE":
+            limitations.append(
+                "Anti-bot challenge detected (e.g., Cloudflare, Imperva, "
+                "DataDome). The scanner could not reach the rendered page."
+            )
+            break
+
+    if not limitations:
+        for item in schema.seo:
+            if item.evidence_type == "SEO_TITLE" and item.value:
+                title = str(item.value).lower()
+                if any(phrase in title for phrase in _CHALLENGE_TITLES):
+                    limitations.append(
+                        "Anti-bot challenge detected (e.g., Cloudflare, Imperva, "
+                        "DataDome). The scanner could not reach the rendered page."
+                    )
+                    break
+
+    if not limitations and any(i.evidence_type == "RATE_LIMITED" for i in schema.evidence):
+        limitations.append(
+            "The target rate-limited the scan (HTTP 429). Some pages may not have been analysed."
+        )
+
+    xml_pages = [i for i in schema.evidence if i.evidence_type == "XML_RESPONSE"]
+    if xml_pages:
+        xml_types = {str(i.value) for i in xml_pages if i.value}
+        xml_detail = ", ".join(sorted(xml_types)) if xml_types else "XML"
+        limitations.append(
+            f"The requested URL returned {xml_detail} content rather than an HTML webpage. "
+            "This commonly occurs for sitemap or feed endpoints. "
+            "The website content could not be analysed from this response."
+        )
+
+    no_page_content = not schema.content and not schema.seo
+    if no_page_content and not limitations and schema.evidence:
+        limitations.append(
+            "No page content was retrieved. The target may be protected by "
+            "robots.txt rules, access restrictions, or a JavaScript-rendered app."
+        )
+    return limitations
+
+
+def _detect_xml_limitation(schema: ScoutSchema) -> list[str]:
+    """Return limitation text when the scan returned XML rather than HTML."""
+    xml_pages = [i for i in schema.evidence if i.evidence_type == "XML_RESPONSE"]
+    if not xml_pages:
+        return []
+    xml_types = {str(i.value) for i in xml_pages if i.value}
+    if "sitemap" in xml_types and not xml_types - {"sitemap"}:
+        return [
+            (
+                "The requested URL returned an XML sitemap rather than an HTML webpage. "
+                "Sitemap URLs were extracted and scanned where possible."
+            ),
+        ]
+    xml_detail = ", ".join(sorted(xml_types)) if xml_types else "XML"
+    return [
+        (
+            f"The requested URL returned {xml_detail} content rather than an HTML webpage. "
+            "This commonly occurs for sitemap or feed endpoints."
+        ),
+    ]
 
 
 def _classify_target(schema: ScoutSchema) -> tuple[str, str]:
     """Classify the target site using only deterministic evidence.
 
-    Returns:
-        (classification, evidence_id) tuple.
+    Returns ``(internal_key, confidence)`` where ``internal_key`` is the
+    canonical classification used by the public API and ``confidence`` is a
+    plain-language coverage note.
     """
     tech_names: set[str] = set()
     for item in schema.technology:
@@ -64,128 +245,260 @@ def _classify_target(schema: ScoutSchema) -> tuple[str, str]:
             if isinstance(name, str):
                 tech_names.add(name.lower())
 
-    content_text_parts: list[str] = []
+    full_text = _collect_full_text(schema)
+    title_text = ""
+    for item in schema.seo:
+        if item.evidence_type == "SEO_TITLE" and isinstance(item.value, str):
+            title_text = item.value.lower()
+            break
+    heading_text = ""
     for item in schema.content:
-        if isinstance(item.value, str):
-            content_text_parts.append(item.value.lower())
-        elif isinstance(item.value, dict):
-            for v in item.value.values():
-                if isinstance(v, str):
-                    content_text_parts.append(v.lower())
-    content_text = " ".join(content_text_parts)
+        if item.evidence_type == "CONTENT_HEADING":
+            heading_text += " " + _plain_text(item)
+    title_or_heading = f"{title_text} {heading_text}"
 
-    ecommerce_indicators = {
-        "shopify", "woocommerce", "magento", "bigcommerce",
-        "stripe", "paypal", "cart", "checkout", "product", "shop",
+    language_names = {
+        "python",
+        "java",
+        "javascript",
+        "typescript",
+        "ruby",
+        "go",
+        "rust",
+        "php",
+        "c++",
+        "c#",
+        "kotlin",
+        "swift",
+        "scala",
+        "dart",
+        "elixir",
+        "haskell",
+        "perl",
+        "r",
+        "lua",
+        "julia",
+        "golang",
     }
-    saas_indicators = {
-        "api", "pricing", "subscription", "trial", "saas", "cloud",
-        "dashboard", "signup", "login", "demo",
-    }
-    blog_indicators = {
-        "blog", "article", "post", "author", "category",
-        "rss", "wordpress", "medium", "newsletter",
-    }
-    agency_indicators = {
-        "agency", "client", "portfolio", "service", "consulting",
-        "case study", "our work", "what we do",
-    }
-    media_indicators = {
-        "video", "podcast", "streaming", "media",
-        "channel", "youtube", "watch",
-    }
-    doc_indicators = {
-        "documentation", "docs", "guide", "tutorial", "reference",
-        "api reference", "manual", "help center", "knowledge base",
-    }
-    programming_indicators = {
-        "python", "java", "javascript", "ruby", "go", "rust",
-        "download", "install", "documentation", "docs",
-    }
-    corporate_indicators = {
-        "about us", "our team", "careers", "contact", "company",
-        "investor", "press", "leadership",
-    }
-    government_indicators = {
-        "government", "official", ".gov", "public service",
-        "citizen", "policy", "regulation",
-    }
-    education_indicators = {
-        "university", "college", "school", "education", ".edu",
-        "course", "student", "faculty", "academic",
-    }
-    news_indicators = {
-        "news", "breaking", "journalist", "editorial",
-        "headline", "report", "magazine",
-    }
+    has_language_name = any(
+        (name in title_text or re.search(r"(?<![a-z])" + re.escape(name) + r"(?![a-z])", full_text))
+        for name in language_names
+    )
 
-    def _indicator_hits(indicators: set[str], text: str) -> int:
-        return sum(1 for ind in indicators if ind in text)
-
-    scores = {
-        "e-commerce platform": (
-            _indicator_hits(ecommerce_indicators, content_text)
-            + sum(1 for t in tech_names if t in ecommerce_indicators)
-        ),
+    indicators = {
         "saas platform": (
-            _indicator_hits(saas_indicators, content_text)
-            + sum(1 for t in tech_names if t in saas_indicators)
+            "saas",
+            "api",
+            "subscription",
+            "trial",
+            "cloud",
+            "dashboard",
+            "signup",
+            "sign-up",
+            "login",
+            "demo",
+            "pricing",
+        ),
+        "e-commerce platform": (
+            "shopify",
+            "woocommerce",
+            "magento",
+            "bigcommerce",
+            "stripe",
+            "paypal",
+            "cart",
+            "checkout",
+            "shop",
+            "store",
         ),
         "news publisher": (
-            _indicator_hits(news_indicators, content_text)
-            + sum(1 for t in tech_names if t in news_indicators)
-        ),
-        "programming language documentation portal": (
-            _indicator_hits(programming_indicators, content_text)
-            + sum(1 for t in tech_names if t in programming_indicators)
-            + (3 if _indicator_hits(doc_indicators, content_text) > 0 else 0)
+            "newsroom",
+            "breaking news",
+            "latest news",
+            "journalist",
+            "editorial",
+            "headline",
+            "press release",
+            "newsletter",
         ),
         "documentation platform": (
-            _indicator_hits(doc_indicators, content_text)
-            + sum(1 for t in tech_names if t in doc_indicators)
+            "documentation",
+            "docs",
+            "tutorial",
+            "reference",
+            "api reference",
+            "knowledge base",
+            "help center",
+            "manual",
+            "guide",
         ),
         "corporate website": (
-            _indicator_hits(corporate_indicators, content_text)
-            + sum(1 for t in tech_names if t in corporate_indicators)
+            "about us",
+            "our team",
+            "careers",
+            "contact us",
+            "company",
+            "investor",
+            "press",
+            "leadership",
+            "our company",
         ),
         "government portal": (
-            _indicator_hits(government_indicators, content_text)
-            + sum(1 for t in tech_names if t in government_indicators)
+            "government",
+            "official website",
+            "public service",
+            "citizen",
+            "policy",
+            "regulation",
+            "gov",
         ),
         "educational institution": (
-            _indicator_hits(education_indicators, content_text)
-            + sum(1 for t in tech_names if t in education_indicators)
+            "university",
+            "college",
+            "school",
+            "education",
+            "course",
+            "student",
+            "faculty",
+            "academic",
+            "campus",
+        ),
+        "media platform": (
+            "watch",
+            "listen",
+            "episode",
+            "podcast",
+            "streaming",
+            "channel",
+            "video library",
+            "media library",
+        ),
+        "agency website": (
+            "agency",
+            "client",
+            "portfolio",
+            "consulting",
+            "case study",
+            "our work",
+            "what we do",
+            "studio",
         ),
     }
+    weights = {
+        "saas platform": 1,
+        "e-commerce platform": 1,
+        "news publisher": 1,
+        "documentation platform": 2,
+        "corporate website": 1,
+        "government portal": 1,
+        "educational institution": 1,
+        "media platform": 1,
+        "agency website": 2,
+    }
+
+    def _hits(words: Iterable[str], text: str) -> int:
+        score = 0
+        for word in words:
+            if re.search(r"\b" + re.escape(word) + r"\b", text) or re.search(
+                r"\b" + re.escape(word) + r"\w*\b", text
+            ):
+                score += 1
+        return score
+
+    scores: dict[str, int] = {}
+    for category, words in indicators.items():
+        base = _hits(words, full_text)
+        tech_bonus = sum(2 for t in tech_names if t in words)
+        weight = weights.get(category, 1)
+        scores[category] = (base + tech_bonus) * weight
+
+    doc_hits = _hits(indicators["documentation platform"], full_text)
+    if doc_hits > 0 and has_language_name:
+        scores["programming language documentation portal"] = (doc_hits + 3) * 2
+
+    media_evidence = any(
+        item.evidence_type in ("CONTENT_VIDEO", "CONTENT_AUDIO") for item in schema.content
+    )
+    if media_evidence:
+        scores["media platform"] = 3
 
     best_category = max(scores, key=lambda k: scores[k])
-    if scores[best_category] == 0:
-        return ("general website", "")
+    best_score = scores[best_category]
 
-    evidence_id = ""
-    for item in schema.technology:
-        if item.evidence_id and best_category in ("e-commerce platform", "saas platform"):
-            evidence_id = item.evidence_id
-            break
+    keyword_strong = any(
+        word in title_or_heading
+        for word in (
+            "saas",
+            "shop",
+            "shopify",
+            "store",
+            "news",
+            "documentation",
+            "docs",
+            "university",
+            "college",
+            "school",
+            "education",
+            "course",
+            "student",
+            "faculty",
+            "academic",
+            "campus",
+            "agency",
+            "studio",
+            "government",
+            "corporate",
+            "company",
+            "media",
+            "podcast",
+            "video",
+            "blog",
+        )
+    )
+    qualifies = best_score >= 3 or (best_score >= 1 and keyword_strong)
+    if not qualifies:
+        return ("general website", "Determined from limited available signals")
+    if best_category == "programming language documentation portal" and not has_language_name:
+        return ("general website", "Determined from limited available signals")
+    if best_category == "documentation platform" and not keyword_strong and not tech_names:
+        return ("general website", "Determined from limited available signals")
 
-    return (best_category, evidence_id)
+    confidence = "Determined from multiple matching signals"
+    return (best_category, confidence)
 
 
 def _count_items(schema: ScoutSchema, category: str) -> int:
-    """Count evidence items for a given category."""
+    """Count evidence items for a given schema category."""
     return len(getattr(schema, category, []))
 
 
+def _count_unique_technologies(schema: ScoutSchema) -> int:
+    """Count unique technology names in the schema."""
+    seen: set[str] = set()
+    for item in schema.technology:
+        if isinstance(item.value, dict):
+            name = item.value.get("name")
+            if isinstance(name, str) and name:
+                seen.add(name)
+        elif isinstance(item.value, str):
+            seen.add(item.value)
+    return len(seen)
+
+
 def _get_seo_status(item_value: object) -> tuple[str, str]:
-    """Return (status_label, detail) for an SEO evidence value."""
+    """Return (status_label, detail) for an SEO evidence value.
+
+    The detail is always human-readable; raw Python objects are never
+    returned to the caller.
+    """
     if item_value is None:
-        return ("MISSING", "Not found")
+        return ("NOT DETECTED", "Not detected")
     if isinstance(item_value, dict):
         noindex = item_value.get("noindex")
         if noindex is True:
             return ("NOINDEX", "Blocked from indexing")
         if noindex is False:
-            return ("INDEXABLE", "Indexable")
+            return ("INDEXABLE", "Open to indexing")
         title = item_value.get("title")
         if title:
             return ("PASS", str(title))
@@ -197,31 +510,40 @@ def _get_seo_status(item_value: object) -> tuple[str, str]:
             return ("PASS", str(url))
         has_json_ld = item_value.get("has_json_ld")
         if has_json_ld:
-            return ("PRESENT", "JSON-LD detected")
+            kinds = []
+            if has_json_ld:
+                kinds.append("JSON-LD")
+            if item_value.get("has_microdata"):
+                kinds.append("Microdata")
+            if item_value.get("has_rdfa"):
+                kinds.append("RDFa")
+            return ("PRESENT", ", ".join(kinds) or "Structured data")
         return ("PASS", "Detected")
-    s = str(item_value)
+    s = clean_text(str(item_value))
     if not s:
-        return ("MISSING", "Not found")
-    return ("PASS", s)
+        return ("NOT DETECTED", "Not detected")
+    return (
+        "PASS",
+        s.upper() if item_value is not None and str(item_value).lower().startswith("utf") else s,
+    )
 
 
 def _compute_health_score(schema: ScoutSchema) -> tuple[list[tuple[str, int]], int]:
-    """Compute health scores for each category.
+    """Compute coverage scores for each signal area.
 
-    Returns:
-        (scores, overall_score) where scores is a list of
-        (category, score_0_100) tuples.
+    Returns ``(scores, overall_score)`` where ``scores`` is a list of
+    ``(area_label, score_0_100)`` tuples. Scores reflect how much of the
+    available signal was captured in this scan, not absolute website quality.
     """
     scores: list[tuple[str, int]] = []
     weights = {
         "Website Reachability": 15,
-        "SEO": 20,
-        "Metadata": 15,
+        "Search Engine Optimization": 20,
+        "Brand Metadata": 15,
         "Technology": 20,
         "Content": 20,
-        "Social": 10,
+        "Social Presence": 10,
     }
-
     earned = 0
     total = sum(weights.values())
 
@@ -236,54 +558,33 @@ def _compute_health_score(schema: ScoutSchema) -> tuple[list[tuple[str, int]], i
     seo_score = 0
     if seo_items:
         checks = {
-            "title": any(
-                _get_evidence_value(i)
-                for i in seo_items
-                if i.evidence_type == "SEO_TITLE"
-            ),
+            "title": any(_evidence_text(i) for i in seo_items if i.evidence_type == "SEO_TITLE"),
             "meta_description": any(
-                _get_evidence_value(i)
-                for i in seo_items
-                if i.evidence_type == "META_DESCRIPTION"
+                _evidence_text(i) for i in seo_items if i.evidence_type == "META_DESCRIPTION"
             ),
             "canonical": any(
-                _get_evidence_value(i)
-                for i in seo_items
-                if i.evidence_type == "CANONICAL"
+                _evidence_text(i) for i in seo_items if i.evidence_type == "CANONICAL"
             ),
-            "charset": any(
-                _get_evidence_value(i)
-                for i in seo_items
-                if i.evidence_type == "CHARSET"
-            ),
-            "viewport": any(
-                _get_evidence_value(i)
-                for i in seo_items
-                if i.evidence_type == "VIEWPORT"
-            ),
-            "language": any(
-                _get_evidence_value(i)
-                for i in seo_items
-                if i.evidence_type == "LANGUAGE"
-            ),
-            "robots": any(
-                _get_evidence_value(i)
-                for i in seo_items
-                if i.evidence_type == "ROBOTS"
+            "charset": any(_evidence_text(i) for i in seo_items if i.evidence_type == "CHARSET"),
+            "viewport": any(_evidence_text(i) for i in seo_items if i.evidence_type == "VIEWPORT"),
+            "language": any(_evidence_text(i) for i in seo_items if i.evidence_type == "LANGUAGE"),
+            "robots": any(_evidence_text(i) for i in seo_items if i.evidence_type == "ROBOTS"),
+            "indexability": any(
+                _evidence_text(i) for i in seo_items if i.evidence_type == "INDEXABILITY"
             ),
         }
         passed = sum(1 for v in checks.values() if v)
         seo_score = int((passed / len(checks)) * 100) if checks else 0
-    scores.append(("SEO", seo_score))
-    earned += int(weights["SEO"] * seo_score / 100)
+    scores.append(("Search Engine Optimization", seo_score))
+    earned += int(weights["Search Engine Optimization"] * seo_score / 100)
 
     metadata_items = schema.metadata
     metadata_score = 0
     if metadata_items:
         unique_types = {i.evidence_type for i in metadata_items}
         metadata_score = min(100, len(unique_types) * 15)
-    scores.append(("Metadata", metadata_score))
-    earned += int(weights["Metadata"] * metadata_score / 100)
+    scores.append(("Brand Metadata", metadata_score))
+    earned += int(weights["Brand Metadata"] * metadata_score / 100)
 
     tech_items = schema.technology
     tech_score = 0
@@ -333,8 +634,8 @@ def _compute_health_score(schema: ScoutSchema) -> tuple[list[tuple[str, int]], i
             social_score = 100
         elif unique_count == 1:
             social_score = 75
-    scores.append(("Social", social_score))
-    earned += int(weights["Social"] * social_score / 100)
+    scores.append(("Social Presence", social_score))
+    earned += int(weights["Social Presence"] * social_score / 100)
 
     overall = int(earned / total * 100) if total > 0 else 0
     return scores, overall
@@ -343,14 +644,16 @@ def _compute_health_score(schema: ScoutSchema) -> tuple[list[tuple[str, int]], i
 def _get_website_type(schema: ScoutSchema) -> str:
     classification, _ = _classify_target(schema)
     labels = {
-        "e-commerce platform": "E-Commerce Platform",
-        "saas platform": "SaaS / Web App",
-        "news publisher": "News Publisher",
+        "e-commerce platform": "E-Commerce Store",
+        "saas platform": "SaaS Platform",
+        "news publisher": "News Website",
         "programming language documentation portal": "Programming Language Documentation Portal",
         "documentation platform": "Documentation Platform",
         "corporate website": "Corporate Website",
         "government portal": "Government Portal",
-        "educational institution": "Educational Institution",
+        "educational institution": "Educational Institution Website",
+        "media platform": "Media Platform",
+        "agency website": "Agency Website",
         "general website": "General Website",
     }
     return labels.get(classification, classification.title())
@@ -358,12 +661,10 @@ def _get_website_type(schema: ScoutSchema) -> str:
 
 def _get_responsive(schema: ScoutSchema) -> str:
     for item in schema.seo:
-        if item.evidence_type == "VIEWPORT":
-            val = item.value
-            if val:
-                return "Yes"
+        if item.evidence_type == "VIEWPORT" and item.value:
+            return "Yes"
     for item in schema.content:
-        val = _get_evidence_value(item).lower()
+        val = _plain_text(item)
         if "viewport" in val and "width=device-width" in val:
             return "Yes"
     return "Unknown"
@@ -374,45 +675,42 @@ def _has_jsonld(schema: ScoutSchema) -> str:
         if item.evidence_type == "STRUCTURED_DATA":
             val = item.value
             if isinstance(val, dict) and val.get("has_json_ld"):
-                return "Present"
+                return "Detected"
             if isinstance(val, str) and "json" in val.lower():
-                return "Present"
-    return "Absent"
+                return "Detected"
+    return "Not detected"
 
 
 def _has_rss(schema: ScoutSchema) -> str:
     for item in schema.metadata:
         if item.evidence_type in ("RSS_FEED", "ATOM_FEED"):
             return "Available"
-    return "Not Available"
+    return "Not available"
 
 
 def _has_canonical(schema: ScoutSchema) -> str:
     for item in schema.seo:
-        if item.evidence_type == "CANONICAL":
-            val = item.value
-            if val:
-                return "Available"
-    return "Not Set"
+        if item.evidence_type == "CANONICAL" and item.value:
+            return "Yes"
+    return "No"
 
 
 def _get_language(schema: ScoutSchema) -> str:
     for item in schema.seo:
         if item.evidence_type == "LANGUAGE":
             val = item.value
-            if isinstance(val, dict):
-                raw = val.get("value", "Unknown")
-                return raw if isinstance(raw, str) else "Unknown"
-            return str(val) if val else "Unknown"
+            raw = val.get("value", "Unknown") if isinstance(val, dict) else val
+            if not raw:
+                return "Unknown"
+            code = str(raw).split("-")[0].lower()
+            return f"{_LANGUAGE_NAMES.get(code, raw)} ({raw})"
     return "Unknown"
 
 
 def _get_charset(schema: ScoutSchema) -> str:
     for item in schema.seo:
-        if item.evidence_type == "CHARSET":
-            val = item.value
-            if val:
-                return str(val)
+        if item.evidence_type == "CHARSET" and item.value:
+            return str(item.value).upper()
     return "Unknown"
 
 
@@ -420,9 +718,50 @@ def _get_robots_status(schema: ScoutSchema) -> str:
     for item in schema.seo:
         if item.evidence_type == "ROBOTS":
             val = item.value
-            if val:
-                return str(val)
+            directive = str(val).lower() if val else ""
+            if "noindex" in directive:
+                return "Blocked (noindex)"
+            if "nofollow" in directive:
+                return "Links not followed"
+            if directive:
+                return "Configured"
+            return "Configured"
     return "Not configured"
+
+
+def _has_xml_pages(schema: ScoutSchema) -> bool:
+    """Return True if any evidence item marks a page as a non-HTML XML response."""
+    return any(item.evidence_type == "XML_RESPONSE" for item in schema.evidence)
+
+
+def _scan_status(schema: ScoutSchema) -> tuple[str, str, list[str]]:
+    """Determine the overall scan result and any coverage limitations."""
+    limitations = _detect_access_limitations(schema)
+    if not schema.evidence:
+        return ("none", "No Data Collected", limitations)
+
+    if limitations:
+        return ("limited", "Limited Scan", limitations)
+
+    core_present = bool(schema.seo) and bool(schema.technology) and bool(schema.content)
+    _, coverage = _compute_health_score(schema)
+    if core_present and coverage >= _SCAN_COVERAGE_THRESHOLD:
+        return ("complete", "Full Scan", limitations)
+    return ("partial", "Partial Scan", limitations)
+
+
+def _build_title(schema: ScoutSchema) -> str:
+    target = schema.site.target_url or schema.site.url
+    date = schema.meta.timestamp[:10]
+    return "\n".join(
+        [
+            "# Website Intelligence Report",
+            "",
+            f"**Target:** {target}",
+            f"**Report Date:** {date}",
+            f"**Generated By:** AIFME Scout OSS {_VERSION}",
+        ]
+    )
 
 
 def _build_executive_summary(schema: ScoutSchema) -> tuple[str, list[str]]:
@@ -432,144 +771,132 @@ def _build_executive_summary(schema: ScoutSchema) -> tuple[str, list[str]]:
 
     target = schema.site.target_url or schema.site.url
     refs.append(target)
-    lines.append(f"**Website:** {target}")
 
-    statuses, confidence = _get_scan_status(schema)
-    overall_status = "PASS"
-    for _, status, _ in statuses:
-        if status in ("MISSING", "FAIL"):
-            overall_status = "FAIL"
-            break
-        if status == "LIMITED":
-            overall_status = "LIMITED"
+    status, status_label, limitations = _scan_status(schema)
 
-    lines.append(f"**Overall Status:** {status_badge(overall_status)}")
-    lines.append(f"**Overall Confidence:** {confidence}")
-    lines.append(f"**Evidence Collected:** {len(schema.evidence)}")
-
+    xml_limitations = _detect_xml_limitation(schema)
+    if xml_limitations:
+        limitations = list(limitations) + xml_limitations
+        if status not in ("none",):
+            status = "limited"
+            status_label = "Limited Scan"
     scores, coverage = _compute_health_score(schema)
-    lines.append(f"**Overall Coverage:** {coverage}%")
+    ev_total = len(schema.evidence)
 
-    lines.append("")
-    lines.append("**Overall Assessment**")
-    lines.append("")
-
-    classification_display = _get_website_type(schema)
-    strengths: list[str] = []
-    weaknesses: list[str] = []
-
-    for name, status, _ in statuses:
-        if status == "PASS":
-            strengths.append(name)
-        elif status in ("MISSING", "FAIL"):
-            weaknesses.append(name)
-
-    summary_parts = []
-    summary_parts.append(f"{target} is a {classification_display}.")
-
-    seo_gaps = []
-    if schema.seo:
-        seo_types = {i.evidence_type for i in schema.seo}
-        if "OPEN_GRAPH" not in seo_types:
-            seo_gaps.append("Open Graph")
-        if "TWITTER_CARD" not in seo_types:
-            seo_gaps.append("Twitter Card")
-
-    if overall_status == "FAIL":
-        summary_parts.append("The website has critical gaps that need immediate attention.")
-    elif overall_status == "LIMITED":
-        summary_parts.append("The website has limited data available due to anti-bot protection or access restrictions.")
-    elif seo_gaps:
-        summary_parts.append("The website demonstrates strong technical implementation and search engine optimization.")
-        if len(seo_gaps) == 1:
-            summary_parts.append(f"A small number of marketing metadata improvements remain, including {seo_gaps[0]} support.")
-        else:
-            summary_parts.append(f"A small number of marketing metadata improvements remain, including {', '.join(seo_gaps[:-1])} and {seo_gaps[-1]} support.")
-    else:
-        summary_parts.append("The website demonstrates strong technical implementation and search engine optimization.")
-
-    summary_parts.append(
-        f"This analysis is based on {len(schema.evidence)} collected evidence points "
-        f"covering {coverage}% of available signals."
-    )
-
-    lines.append(" ".join(summary_parts))
-
-    return "\n".join(lines), refs
-
-
-def _get_scan_status(schema: ScoutSchema) -> tuple[list[tuple[str, str, str]], str]:
-    """Determine scan status for each category.
-
-    Returns:
-        (status_list, overall_confidence) where status_list contains
-        (category, status, reason) tuples.
-    """
-    statuses: list[tuple[str, str, str]] = []
-    categories = [
-        ("SEO", schema.seo, "SEO signals collected"),
-        ("Metadata", schema.metadata, "Metadata collected"),
-        ("Technology", schema.technology, "Technologies detected"),
-        ("Content", schema.content, "Content extracted"),
-        ("Social", schema.social, "Social profiles found"),
-    ]
-
-    anti_bot_indicators = ["cloudflare", "captcha", "challenge", "access denied", "403", "401"]
-    has_anti_bot = False
-    for item in schema.content:
-        val = _get_evidence_value(item).lower()
-        if any(ind in val for ind in anti_bot_indicators):
-            has_anti_bot = True
-            break
-    for item in schema.seo:
-        val = _get_evidence_value(item).lower()
-        if any(ind in val for ind in anti_bot_indicators):
-            has_anti_bot = True
-            break
-
-    for name, items, success_msg in categories:
-        count = len(items)
-        if count > 0:
-            statuses.append((name, "PASS", success_msg))
-        elif has_anti_bot:
-            statuses.append((name, "LIMITED", "Limited by anti-bot protection"))
-        else:
-            statuses.append((name, "MISSING", "No data found"))
-
-    if has_anti_bot:
+    if status == "none":
+        confidence = "None"
+    elif limitations:
         confidence = "Low"
-    elif all(s == "PASS" for _, s, _ in statuses):
+    elif coverage >= 90 and status == "complete":
         confidence = "High"
-    elif any(s == "PASS" for _, s, _ in statuses):
+    elif coverage >= 70:
         confidence = "Medium"
     else:
         confidence = "Low"
 
-    return statuses, confidence
+    lines.append(f"**Overall Status:** {status_label}")
+    lines.append(f"**Signal Coverage:** {coverage}%")
+    lines.append(f"**Evidence Collected:** {ev_total}")
+    lines.append(f"**Confidence:** {confidence}")
+
+    lines.append("")
+    lines.append("**Scan Outcome at a Glance**")
+    lines.append("")
+    area_rows = [
+        [
+            "Search Engine Optimization",
+            str(_count_items(schema, "seo")),
+            rating(_area_score(scores, "Search Engine Optimization")),
+        ],
+        [
+            "Brand Metadata",
+            str(_count_items(schema, "metadata")),
+            rating(_area_score(scores, "Brand Metadata")),
+        ],
+        [
+            "Technology",
+            str(_count_unique_technologies(schema)),
+            rating(_area_score(scores, "Technology")),
+        ],
+        ["Content", str(_count_items(schema, "content")), rating(_area_score(scores, "Content"))],
+        [
+            "Social Profiles",
+            str(_count_items(schema, "social")),
+            rating(_area_score(scores, "Social Presence")),
+        ],
+        [
+            "Competitive References",
+            str(_count_items(schema, "competitors")),
+            rating(
+                _area_score(scores, "Social Presence") if _count_items(schema, "competitors") else 0
+            ),
+        ],
+    ]
+    lines.append(table(["Signal Area", "Items Collected", "Coverage"], area_rows))
+    lines.append("")
+    lines.append(
+        "Coverage reflects how much of each signal area was captured in this "
+        "scan. It is a measure of scan completeness, **not** of website quality "
+        "or performance."
+    )
+
+    lines.append("")
+    lines.append("**Overall Assessment**")
+    lines.append("")
+    classification = _get_website_type(schema)
+    assessment = [f"{target} is classified as a **{classification}**."]
+    if status == "complete":
+        assessment.append(
+            "This scan completed successfully and captured a comprehensive set of signals."
+        )
+    elif status == "partial":
+        assessment.append(
+            "This scan completed but captured only part of the available signal. "
+            "Some areas may have been outside the scope of this scan."
+        )
+    elif status == "limited":
+        assessment.append(
+            "This scan produced limited results. Anti-bot protection, "
+            "JavaScript rendering requirements, robots.txt restrictions, or "
+            "access restrictions may have prevented full analysis."
+        )
+    else:
+        assessment.append(
+            "This scan did not return usable data for the target. The result may "
+            "be caused by access restrictions rather than the website itself."
+        )
+    assessment.append(
+        f"The assessment is based on {ev_total} evidence points covering "
+        f"{coverage}% of available signals."
+    )
+    lines.append(" ".join(assessment))
+
+    return "\n".join(lines), refs
+
+
+def _area_score(scores: list[tuple[str, int]], area: str) -> int:
+    """Return the numeric score for a given area label."""
+    for label, score in scores:
+        if label == area:
+            return score
+    return 0
 
 
 def _build_health_score(schema: ScoutSchema) -> tuple[str, list[str]]:
-    """Build the Health Score section."""
+    """Build the Signal Coverage section."""
     lines: list[str] = []
     refs: list[str] = []
 
     scores, overall = _compute_health_score(schema)
-
-    lines.append("| Area | Score |")
-    lines.append("|------|-------|")
-    for category, score in scores:
-        lines.append(f"| {category} | {score_bar(score)} |")
-
+    rows = [[area, score_bar(score), status_badge(rating(score))] for area, score in scores]
+    lines.append(table(["Signal Area", "Coverage Score", "Rating"], rows))
     lines.append("")
-    lines.append("**Business Takeaway**")
-    lines.append("")
-    if overall >= 80:
-        lines.append("The website is in good shape. Focus on maintaining current strengths.")
-    elif overall >= 60:
-        lines.append("The website has solid foundations but has clear opportunities for improvement.")
-    else:
-        lines.append("The website needs attention. Prioritize the weaknesses and recommendations below.")
-
+    lines.append(
+        "Scores measure how much of each signal area this scan was able to "
+        "collect. They reflect scan coverage, not the quality of the website. "
+        "A low score in one area may mean the signal was simply not present in "
+        "the scanned pages or was restricted by the target."
+    )
     return "\n".join(lines), refs
 
 
@@ -581,35 +908,54 @@ def _build_website_overview(schema: ScoutSchema) -> tuple[str, list[str]]:
     target = schema.site.target_url or schema.site.url
     refs.append(target)
 
+    classification = _get_website_type(schema)
+    _, classification_confidence = _classify_target(schema)
+    classification_confidence = _classification_confidence_label(classification_confidence)
+
     pairs: list[tuple[str, str]] = [
-        ("URL", target),
-        ("Website Type", _get_website_type(schema)),
-        ("Responsive", _get_responsive(schema)),
+        ("Website URL", target),
+        ("Website Category", classification),
+        ("Classification Confidence", classification_confidence),
+        ("Mobile-Friendly Design", _get_responsive(schema)),
         ("Structured Data", _has_jsonld(schema)),
         ("RSS Feeds", _has_rss(schema)),
         ("Canonical URL", _has_canonical(schema)),
+        ("Primary Language", _get_language(schema)),
         ("Character Encoding", _get_charset(schema)),
         ("Search Engine Instructions", _get_robots_status(schema)),
     ]
+    display = [(key, value) for key, value in pairs if value and value != "Unknown"]
+    lines.append(key_value_pairs(display))
 
-    display_pairs: list[tuple[str, str]] = []
-    for key, value in pairs:
-        if value and value != "Unknown":
-            display_pairs.append((key, value))
+    # Add classification rationale
+    classification_lines, classification_refs = _build_classification_details(schema)
+    if classification_lines:
+        lines.append("")
+        lines.append(classification_lines)
+        refs.extend(classification_refs)
 
-    if display_pairs:
-        lines.append(table(["Item", "Value"], display_pairs))
-    else:
-        lines.append("No website overview data available.")
+    return "\n".join(lines), refs
 
+
+def _build_scan_limitations(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the Scan Limitations section when coverage was restricted."""
+    lines: list[str] = []
+    refs: list[str] = []
+
+    _, _, limitations = _scan_status(schema)
+    if not limitations:
+        return "\n".join(lines), refs
+
+    lines.append("The following factors may have limited this scan's coverage:")
     lines.append("")
-    lines.append("**Business Takeaway**")
+    lines.extend(f"- {item}" for item in limitations)
     lines.append("")
-    if display_pairs:
-        lines.append("This overview confirms the website is properly configured for global visitors and search engines.")
-    else:
-        lines.append("Basic website configuration detected.")
-
+    lines.append(
+        "These factors affect scan coverage only, **not** the quality of the "
+        "website. When a scan is restricted, the absence of a signal does not "
+        "mean the signal is absent from the website. A follow-up scan with "
+        "different settings may reveal additional detail."
+    )
     return "\n".join(lines), refs
 
 
@@ -619,78 +965,104 @@ def _build_seo_analysis(schema: ScoutSchema) -> tuple[str, list[str]]:
     refs: list[str] = []
 
     if not schema.seo:
-        lines.append("No SEO information was collected.")
+        lines.append("No SEO evidence was collected during this scan.")
         lines.append("")
-        lines.append("This means search engines may not see the website correctly, "
-                      "which can reduce organic traffic.")
+        lines.append(
+            "Without SEO evidence, this scan cannot assess the target's search "
+            "engine visibility. The absence of evidence here reflects scan "
+            "coverage, not necessarily the website's configuration."
+        )
         return "\n".join(lines), refs
 
     seo_checks = [
-        ("Page Title", "SEO_TITLE", "The title appears in search results and browser tabs"),
-        ("Meta Description", "META_DESCRIPTION", "The description influences click-through rate from search"),
-        ("Canonical URL", "CANONICAL", "Prevents duplicate content issues in search"),
+        ("Page Title", "SEO_TITLE", "Appears in search results and browser tabs"),
+        ("Meta Description", "META_DESCRIPTION", "Influences search click-through rate"),
+        ("Canonical URL", "CANONICAL", "Prevents duplicate content in search"),
         ("Search Engine Instructions", "ROBOTS", "Tells search engines which pages to index"),
-        ("Language", "LANGUAGE", "Helps search engines serve the right audience"),
+        ("Primary Language", "LANGUAGE", "Helps search engines serve the right audience"),
         ("Character Encoding", "CHARSET", "Ensures text displays correctly for all visitors"),
-        ("Viewport", "VIEWPORT", "Required for mobile-friendly search ranking"),
+        ("Mobile Viewport", "VIEWPORT", "Required for mobile-friendly ranking"),
     ]
-
     structured_checks = [
-        ("Open Graph", "OPEN_GRAPH", "Controls how pages appear when shared on social media"),
+        ("Open Graph", "OPEN_GRAPH", "Controls how pages appear when shared socially"),
         ("Twitter Card", "TWITTER_CARD", "Controls how pages appear when shared on X/Twitter"),
-        ("Structured Data", "STRUCTURED_DATA", "Helps search engines display rich results"),
+        ("Structured Data", "STRUCTURED_DATA", "Helps search engines show rich results"),
     ]
 
-    seo_map: dict[str, EvidenceItem] = {}
-    for seo_item in schema.seo:
-        seo_map[seo_item.evidence_type] = seo_item
+    seo_map: dict[str, EvidenceItem] = {i.evidence_type: i for i in schema.seo}
 
     rows: list[list[str]] = []
     for label, evidence_type, impact in seo_checks:
         found = seo_map.get(evidence_type)
         if found is not None:
             status, detail = _get_seo_status(found.value)
-            if status == "MISSING":
-                status_label = "Not set"
-            elif status == "PASS":
-                status_label = "Yes"
-            else:
-                status_label = status_badge(status)
-            display_value = detail if len(detail) <= 60 else detail[:57] + "..."
-            rows.append([label, status_label, display_value])
+            if evidence_type == "CHARSET" and detail:
+                detail = detail.upper()
+            display_value = detail if len(detail) <= 60 else truncate_text(detail, 60)
+            rows.append([label, status_badge(status), display_value, impact])
             if found.evidence_id:
                 refs.append(found.evidence_id)
         else:
-            rows.append([label, "Not set", "Not configured"])
+            rows.append([label, "Not detected", "Not detected", impact])
 
     for label, evidence_type, impact in structured_checks:
         found = seo_map.get(evidence_type)
         if found is not None:
             status, detail = _get_seo_status(found.value)
-            if status == "MISSING":
-                status_label = "Not set"
-            elif status == "PASS":
-                status_label = "Yes"
-            else:
-                status_label = status_badge(status)
-            display_value = detail if len(detail) <= 60 else detail[:57] + "..."
-            rows.append([label, status_label, display_value])
+            display_value = detail if len(detail) <= 60 else truncate_text(detail, 60)
+            rows.append([label, status_badge(status), display_value, impact])
             if found.evidence_id:
                 refs.append(found.evidence_id)
         else:
-            rows.append([label, "Not set", "Not detected"])
+            rows.append([label, "Not detected", "Not detected", impact])
 
-    lines.append(table(["SEO Item", "Status", "Value"], rows))
+    lines.append(table(["SEO Element", "Status", "Detail", "Business Value"], rows))
+
+    robots_evidence = seo_map.get("ROBOTS")
+    indexability = next((i for i in schema.seo if i.evidence_type == "INDEXABILITY"), None)
+    if indexability is not None or (robots_evidence is not None and robots_evidence.value):
+        lines.append("")
+        lines.append("### Search Engine Indexing Directives")
+        lines.append("")
+        directive_rows: list[list[str]] = []
+        if indexability is not None and isinstance(indexability.value, dict):
+            for key in ("noindex", "nofollow", "noarchive", "nosnippet"):
+                flag = indexability.value.get(key)
+                if isinstance(flag, bool):
+                    label = humanize_label(key)
+                    directive_rows.append([label, status_badge("YES" if flag else "NO")])
+                    if flag:
+                        directive_rows.append(
+                            [f"{label} Effect", "Search engines will not honour this directive"]
+                        )
+                    else:
+                        directive_rows.append(
+                            [f"{label} Effect", "Search engines may index and follow normally"]
+                        )
+        if robots_evidence is not None and robots_evidence.value:
+            raw = str(robots_evidence.value).lower()
+            directive_rows.append(["Robots Meta Tag", clean_text(str(robots_evidence.value))])
+            if "noindex" in raw:
+                directive_rows.append(["Indexing", "Blocked from indexing"])
+            if "nofollow" in raw:
+                directive_rows.append(["Link Following", "Links not followed"])
+        if directive_rows:
+            lines.append(table(["Directive", "Value"], directive_rows))
+
+    not_detected = [r[0] for r in rows if r[1] == "Not detected"]
     lines.append("")
     lines.append("**Business Takeaway**")
     lines.append("")
-
-    missing = [r[0] for r in rows if r[1] == "Not set"]
-    if missing:
-        lines.append(f"Missing SEO items: {', '.join(missing)}. "
-                      f"These gaps can reduce search visibility and click-through rates.")
+    if not_detected:
+        lines.append(
+            f"The following SEO elements were not detected in the scanned page: "
+            f"{', '.join(not_detected)}. Their absence here reflects scan "
+            f"coverage, not necessarily a problem with the website."
+        )
     else:
-        lines.append("All core SEO elements are present. The website is well-optimized for search engines.")
+        lines.append(
+            "All core SEO elements are present. The website is well-optimized for search engines."
+        )
 
     return "\n".join(lines), refs
 
@@ -701,61 +1073,62 @@ def _build_metadata_analysis(schema: ScoutSchema) -> tuple[str, list[str]]:
     refs: list[str] = []
 
     if not schema.metadata:
-        lines.append("No metadata detected.")
-        lines.append("")
-        lines.append("Missing metadata can hurt search rankings and brand consistency.")
+        lines.append("No metadata evidence was collected during this scan.")
         return "\n".join(lines), refs
 
-    brand_items = []
+    brand_items: list[tuple[str, str]] = []
     favicons: list[str] = []
     rss_feeds: list[str] = []
     verification: list[str] = []
 
     for item in schema.metadata:
         val = item.value
-        if item.evidence_type == "SITE_NAME":
-            if val:
-                brand_items.append(("Brand", str(val)))
-        elif item.evidence_type == "FAVICON":
-            if val:
-                favicons.append(str(val))
-        elif item.evidence_type in ("RSS_FEED", "ATOM_FEED"):
-            if val:
-                rss_feeds.append(str(val))
-        elif item.evidence_type == "VERIFICATION_TAG":
-            if isinstance(val, dict):
-                platform = val.get("platform", "")
-                value = val.get("value", "")
-                if platform and value:
-                    verification.append(f"{platform.title()}: {value}")
+        if item.evidence_type == "SITE_NAME" and val:
+            brand_items.append(("Brand Name", str(val)))
+        elif item.evidence_type == "APPLICATION_NAME" and val:
+            brand_items.append(("Application Name", str(val)))
         elif item.evidence_type == "GENERATOR" and val:
             brand_items.append(("Generator", str(val)))
         elif item.evidence_type == "AUTHOR" and val:
             brand_items.append(("Author", str(val)))
         elif item.evidence_type == "PUBLISHER" and val:
             brand_items.append(("Publisher", str(val)))
+        elif item.evidence_type == "COPYRIGHT" and val:
+            brand_items.append(("Copyright", str(val)))
+        elif item.evidence_type == "FAVICON" and val:
+            favicons.append(str(val))
+        elif item.evidence_type == "MANIFEST" and val:
+            brand_items.append(("Web App Manifest", str(val)))
+        elif item.evidence_type == "THEME_COLOR" and val:
+            brand_items.append(("Theme Color", str(val)))
+        elif item.evidence_type in ("RSS_FEED", "ATOM_FEED") and val:
+            rss_feeds.append(str(val))
+        elif item.evidence_type == "VERIFICATION_TAG" and isinstance(val, dict):
+            platform = val.get("platform", "")
+            value = val.get("value", "")
+            if platform and value:
+                verification.append(f"{platform.title()}: {value}")
 
     if brand_items:
-        lines.append("**Brand**")
+        lines.append("### Brand & Identity")
         lines.append("")
-        for key, value in brand_items:
-            lines.append(f"- {key}: {value}")
+        lines.append(key_value_pairs(brand_items))
         lines.append("")
 
     if favicons:
-        lines.append("**Brand Icon**")
+        lines.append("### Brand Assets")
         lines.append("")
-        lines.append("Brand icon detected.")
+        lines.append("Bookmark and app icons were detected.")
         lines.append("")
 
     if rss_feeds:
-        lines.append("**RSS Feeds**")
+        lines.append("### Content Feeds")
         lines.append("")
         lines.append(bullet_list(rss_feeds[:5]))
         lines.append("")
 
     if verification:
-        lines.append("**Verification**")
+        lines.append("### Search Engine Verification")
         lines.append("")
         lines.append(bullet_list(verification[:5]))
         lines.append("")
@@ -764,20 +1137,25 @@ def _build_metadata_analysis(schema: ScoutSchema) -> tuple[str, list[str]]:
     lines.append("")
     parts = []
     if brand_items:
-        parts.append("the site has a defined brand identity")
+        parts.append("a defined brand identity")
     if favicons:
-        parts.append("bookmark icons are set up")
+        parts.append("bookmark icons")
     if rss_feeds:
-        parts.append("content can be syndicated automatically")
+        parts.append("content syndication feeds")
     if verification:
-        parts.append("search engine verification is configured")
-
+        parts.append("search engine verification")
     if parts:
-        lines.append(f"Metadata shows {', '.join(parts)}.")
+        lines.append(f"Metadata confirms {', '.join(parts)}.")
     else:
-        lines.append("Limited metadata detected. More metadata can improve search appearance.")
-
+        lines.append(
+            "Limited brand metadata was detected. Additional metadata can improve "
+            "how the website appears in search and on devices."
+        )
     return "\n".join(lines), refs
+
+
+def _readable_detection(method: str) -> str:
+    return _DETECTION_METHOD_LABELS.get(method, clean_text(method))
 
 
 def _build_technology_stack(schema: ScoutSchema) -> tuple[str, list[str]]:
@@ -786,71 +1164,76 @@ def _build_technology_stack(schema: ScoutSchema) -> tuple[str, list[str]]:
     refs: list[str] = []
 
     if not schema.technology:
-        lines.append("No technologies detected.")
-        lines.append("")
-        lines.append("Technology detection helps understand the site's infrastructure and potential vulnerabilities.")
+        lines.append("No technology evidence was collected during this scan.")
         return "\n".join(lines), refs
 
-    category_explanations = {
-        "frontend": "user interface technology",
-        "backend": "server-side technology",
-        "cms": "content management system",
-        "e-commerce": "online store platform",
-        "analytics": "traffic tracking tool",
-        "language": "programming language",
-        "framework": "development framework",
-        "web-server": "web server software",
-        "hosting": "hosting provider",
-    }
-
-    seen: set[tuple[str, str]] = set()
+    seen: set[str] = set()
     rows: list[list[str]] = []
     for item in schema.technology:
         val = item.value
         if isinstance(val, dict):
-            raw_name = val.get("name", "Unknown")
-            raw_category = val.get("category", "Unknown")
-            raw_confidence = val.get("confidence", "medium")
-            raw_detection = val.get("detection_method", "fingerprint")
-            name = raw_name if isinstance(raw_name, str) else str(raw_name)
-            category = raw_category if isinstance(raw_category, str) else str(raw_category)
-            confidence = raw_confidence if isinstance(raw_confidence, str) else str(raw_confidence)
-            detection = raw_detection if isinstance(raw_detection, str) else str(raw_detection)
+            name = str(val.get("name", "Unknown"))
+            category = str(val.get("category", "Unknown"))
+            confidence = str(val.get("confidence", "medium"))
         else:
             name = str(val)
             category = "Unknown"
             confidence = "medium"
-            detection = "fingerprint"
 
-        key = (name.lower(), category.lower())
-        if key in seen:
+        if name in seen:
             continue
-        seen.add(key)
+        seen.add(name)
 
-        readable_category = category_explanations.get(category.lower(), category)
-        readable_detection = "Automated detection" if detection == "fingerprint" else detection
-        rows.append([name, readable_category, status_badge(confidence), readable_detection])
+        purpose = _CATEGORY_EXPLANATIONS.get(category.lower(), humanize_label(category))
+        rows.append([name, purpose, status_badge(confidence)])
         if item.evidence_id:
             refs.append(item.evidence_id)
 
     rows.sort(key=lambda r: r[0].lower())
-    lines.append(table(["Technology", "Category", "Confidence", "Detection"], rows))
+    lines.append(table(["Technology", "Purpose", "Confidence"], rows))
+
     lines.append("")
     lines.append("**Business Takeaway**")
     lines.append("")
     if rows:
-        lines.append(f"The site runs on {', '.join(r[0] for r in rows[:3])}. "
-                      "This stack is modern and widely supported, reducing technical risk.")
+        category_names = sorted({r[1] for r in rows})
+        lines.append(
+            f"The scan detected {len(rows)} technologies across "
+            f"{len(category_names)} categories: {', '.join(category_names)}. "
+            "Detection is based on observable signals such as response headers, "
+            "page markup, and linked assets."
+        )
     else:
-        lines.append("No technology detected. This limits the ability to assess infrastructure quality.")
-
+        lines.append("No technology was detected during this scan.")
     return "\n".join(lines), refs
 
 
-def _filter_navigation_noise(text: str) -> bool:
-    """Return True if the text should be filtered out as navigation noise."""
-    lower = text.lower().strip()
-    return lower in _NAVIGATION_NOISE or lower.startswith("back to") or len(lower) <= 2
+_BOILERPLATE = (
+    "privacy",
+    "terms of service",
+    "terms of use",
+    "cookie",
+    "copyright",
+    "all rights reserved",
+    "legal",
+    "sitemap",
+    "contact us",
+    "newsletter",
+    "subscribe",
+    "sign in",
+    "log in",
+    "menu",
+    "skip to",
+    "back to top",
+    "accept",
+    "close",
+    "search",
+)
+
+
+def _is_boilerplate(text: str) -> bool:
+    lowered = text.lower()
+    return any(token in lowered for token in _BOILERPLATE)
 
 
 def _build_content_analysis(schema: ScoutSchema) -> tuple[str, list[str]]:
@@ -858,117 +1241,86 @@ def _build_content_analysis(schema: ScoutSchema) -> tuple[str, list[str]]:
     lines: list[str] = []
     refs: list[str] = []
 
-    content_items = schema.content
-    if not content_items:
-        lines.append("No content was extracted.")
+    if not schema.content:
+        lines.append("No content evidence was collected during this scan.")
         lines.append("")
-        lines.append("This limits the analysis. JavaScript-heavy sites may need a different scanner.")
+        lines.append(
+            "JavaScript-heavy or access-restricted sites may not expose content "
+            "to a server-side scan."
+        )
         return "\n".join(lines), refs
 
-    headings: list[tuple[int, str]] = []
-    topics: list[str] = []
-    seen_headings: set[str] = set()
+    # Primary Topics
+    topic_lines, topic_refs = _build_content_topics(schema)
+    if topic_lines:
+        lines.append(topic_lines)
+        refs.extend(topic_refs)
 
-    for item in content_items:
-        val = _get_evidence_value(item)
-        if item.evidence_type == "CONTENT_HEADING":
-            if "level=" in val and "text=" in val:
-                parts = dict(part.split("=", 1) for part in val.split(", ") if "=" in part)
-                level_str = parts.get("level", "")
-                text = parts.get("text", val)
-                if level_str.isdigit():
-                    level = int(level_str)
-                    if not _filter_navigation_noise(text) and text not in seen_headings:
-                        seen_headings.add(text)
-                        headings.append((level, text))
-            else:
-                if not _filter_navigation_noise(val) and val not in seen_headings:
-                    seen_headings.add(val)
-                    headings.append((2, val))
-        elif item.evidence_type == "CONTENT_PARAGRAPH":
-            words = val.split()
-            if len(words) > 5:
-                topics.append(val[:100])
+    # Top Keywords
+    keyword_lines, keyword_refs = _build_content_keywords(schema)
+    if keyword_lines:
+        lines.append(keyword_lines)
+        refs.extend(keyword_refs)
 
-    if topics:
-        lines.append("**Main Topics**")
-        lines.append("")
-        unique_topics = list(dict.fromkeys(topics))[:8]
-        lines.append(bullet_list(unique_topics))
-        lines.append("")
+    # Content Inventory
+    counts: Counter[str] = Counter()
+    for item in schema.content:
+        counts[item.evidence_type] += 1
 
-    if headings:
-        lines.append("**Headings**")
-        lines.append("")
-        for level, text in headings[:15]:
-            prefix = "#" * min(level, 3)
-            lines.append(f"- {prefix} {text}")
-        if len(headings) > 15:
-            lines.append(f"- ... and {len(headings) - 15} more")
-        lines.append("")
+    lines.append("### Content Inventory")
+    lines.append("")
+    inventory = [
+        ("Headings", counts.get("CONTENT_HEADING", 0)),
+        ("Paragraphs", counts.get("CONTENT_PARAGRAPH", 0)),
+        ("Lists", counts.get("CONTENT_LIST", 0)),
+        ("Tables", counts.get("CONTENT_TABLE", 0)),
+        ("Images", counts.get("IMAGE", 0)),
+        ("Links", counts.get("LINK", 0)),
+        ("Videos", counts.get("CONTENT_VIDEO", 0)),
+        ("Audio", counts.get("CONTENT_AUDIO", 0)),
+    ]
+    lines.append(
+        table(
+            ["Content Type", "Count"], [[label, str(count)] for label, count in inventory if count]
+        )
+    )
 
+    lines.append("")
     lines.append("**Business Takeaway**")
     lines.append("")
+    headings = [item for item in schema.content if item.evidence_type == "CONTENT_HEADING"]
     if headings:
-        main_topic = headings[0][1]
-        other_headings = [h[1] for h in headings[1:3]]
-        if other_headings:
-            lines.append(f"The page covers {', '.join(other_headings)}. "
-                          "Clear headings help visitors and search engines understand the content.")
-        else:
-            lines.append(f"The page focuses on \"{main_topic}\". "
-                          "Clear headings help visitors and search engines understand the content.")
+        main_topic = _plain_text(headings[0]).title()
+        lines.append(
+            f'The page is organised around "{main_topic}". Clear, descriptive '
+            "headings help visitors and search engines understand the content."
+        )
     else:
-        lines.append("Content structure is limited. More structured content can improve engagement.")
-
+        lines.append(
+            "Content structure was limited in this scan. More structured content "
+            "can improve engagement and search visibility."
+        )
     return "\n".join(lines), refs
+
+
+def _social_account_label(platform: str, username: str, url: str) -> str:
+    """Derive the most useful account label from a social profile."""
+    generic = {"company", "in", "channel", "user", "users", "profile", "profiles", "home", "intent"}
+    if username and username.lower() not in generic:
+        return f"{platform}: @{username}"
+    from urllib.parse import urlparse
+
+    path = urlparse(url).path.strip("/")
+    if path:
+        segment = path.split("/")[0]
+        if segment and segment.lower() not in generic:
+            return f"{platform}: {segment}"
+    return f"{platform}: {url}"
 
 
 def _build_social_presence(schema: ScoutSchema) -> tuple[str, list[str]]:
     """Build the Social Presence section."""
-    lines: list[str] = []
-    refs: list[str] = []
-
-    if not schema.social:
-        lines.append("No social profiles detected.")
-        lines.append("")
-        lines.append("Without social profiles, the brand misses opportunities for engagement and traffic.")
-        return "\n".join(lines), refs
-
-    seen: set[str] = set()
-    rows: list[list[str]] = []
-    for item in schema.social:
-        val = item.value
-        if isinstance(val, dict):
-            platform = val.get("platform", "Unknown")
-            url = val.get("url", "")
-            username = val.get("username", "")
-        else:
-            platform = "Unknown"
-            url = str(val)
-            username = ""
-
-        account = username or url
-        if url not in seen and url:
-            seen.add(url)
-            rows.append([platform, account])
-            if item.evidence_id:
-                refs.append(item.evidence_id)
-
-    if len(rows) == 1:
-        lines.append(f"**{rows[0][0]}:** {rows[0][1]}")
-    elif rows:
-        lines.append(table(["Platform", "Account"], rows))
-    else:
-        lines.append("No social profiles detected.")
-
-    lines.append("")
-    lines.append("**Business Takeaway**")
-    lines.append("")
-    lines.append("Social profiles help build brand trust and drive referral traffic. "
-                  "Consider adding more platforms to reach a wider audience.")
-
-    return "\n".join(lines), refs
+    return _build_social_presence_improved(schema)
 
 
 def _build_competitive_signals(schema: ScoutSchema) -> tuple[str, list[str]]:
@@ -977,9 +1329,12 @@ def _build_competitive_signals(schema: ScoutSchema) -> tuple[str, list[str]]:
     refs: list[str] = []
 
     if not schema.competitors:
-        lines.append("No competitor signals detected.")
+        lines.append("No competitive references were detected during this scan.")
         lines.append("")
-        lines.append("Without competitor data, it is harder to benchmark performance and identify gaps.")
+        lines.append(
+            "Scout only reports competitors that the target site explicitly names "
+            "or links to. Their absence does not imply a lack of competition."
+        )
         return "\n".join(lines), refs
 
     seen: set[str] = set()
@@ -987,54 +1342,601 @@ def _build_competitive_signals(schema: ScoutSchema) -> tuple[str, list[str]]:
     for item in schema.competitors:
         val = item.value
         if isinstance(val, dict):
-            name = val.get("name", "Unknown")
-            url = val.get("url", "") or ""
+            name = str(val.get("name", "Unknown"))
+            url = str(val.get("url", "") or "")
         else:
             name = str(val)
             url = ""
-
-        if name not in seen:
-            seen.add(name)
-            rows.append([name, url if url else "N/A"])
-            if item.evidence_id:
-                refs.append(item.evidence_id)
+        if name in seen:
+            continue
+        seen.add(name)
+        rows.append([name, url if url else "Not available"])
+        if item.evidence_id:
+            refs.append(item.evidence_id)
 
     if len(rows) == 1:
         lines.append(f"**Competitor:** {rows[0][0]}")
-        if rows[0][1] != "N/A":
+        if rows[0][1] != "Not available":
             lines.append(f"**URL:** {rows[0][1]}")
     elif rows:
-        lines.append(table(["Competitor", "URL"], rows))
+        lines.append(table(["Competitor", "Reference"], rows))
     else:
-        lines.append("No competitor signals detected.")
+        lines.append("No competitive references were detected during this scan.")
 
     lines.append("")
     lines.append("**Business Takeaway**")
     lines.append("")
-    if len(rows) == 1:
-        lines.append(f"Competitor awareness helps the business stay competitive. "
-                      f"Currently {len(rows)} competitor identified for further analysis.")
-    else:
-        lines.append(f"Competitor awareness helps the business stay competitive. "
-                      f"Currently {len(rows)} competitors identified for further analysis.")
-
+    lines.append(
+        f"Competitor awareness helps the business stay competitive. "
+        f"{len(rows)} competitor reference(s) were identified for further analysis."
+    )
     return "\n".join(lines), refs
 
 
 def _build_strengths(schema: ScoutSchema) -> tuple[str, list[str]]:
-    """Build the Strengths section."""
+    """Build the Top Strengths section."""
+    return _build_strengths_improved(schema)
+
+
+def _build_weaknesses(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the Improvement Opportunities section."""
+    return _build_weaknesses_improved(schema)
+
+
+def _build_recommendations(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the Executive Recommendations section."""
+    return _build_recommendations_improved(schema)
+
+
+def _build_executive_scorecard(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the Executive Scorecard section."""
+    lines: list[str] = []
+    refs: list[str] = []
+
+    scores, overall = _compute_health_score(schema)
+    score_map = dict(scores)
+
+    def _level(score: int) -> str:
+        if score >= 90:
+            return "Excellent"
+        if score >= 70:
+            return "Good"
+        if score >= 40:
+            return "Partial"
+        if score > 0:
+            return "Limited"
+        return "Not collected"
+
+    rows = [
+        ["Scan Coverage", _level(score_map.get("Website Reachability", 0))],
+        ["Brand Metadata", _level(score_map.get("Brand Metadata", 0))],
+        ["Technology Signals", _level(score_map.get("Technology", 0))],
+        ["Content Coverage", _level(score_map.get("Content", 0))],
+        ["Social Presence", _level(score_map.get("Social Presence", 0))],
+        ["SEO Coverage", _level(score_map.get("Search Engine Optimization", 0))],
+    ]
+    lines.append(table(["Area", "Status"], rows))
+    return "\n".join(lines), refs
+
+
+def _build_business_snapshot(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the Business Snapshot section."""
+    lines: list[str] = []
+    refs: list[str] = []
+
+    classification, _ = _classify_target(schema)
+    display_classification = _get_website_type(schema)
+
+    # Primary Audience - deterministic extraction from content
+    audience_signals = _extract_audience_signals(schema)
+    primary_audience = (
+        ", ".join(audience_signals)
+        if audience_signals else "Not enough evidence collected"
+    )
+
+    # Content Strategy - from content types present
+    content_strategy = _determine_content_strategy(schema)
+
+    # Brand Presence - from metadata and social evidence
+    brand_presence = _assess_brand_presence(schema)
+
+    # Technology Maturity - from technology evidence
+    tech_maturity = _assess_tech_maturity(schema)
+
+    # Content Depth - from content counts
+    content_depth = _assess_content_depth(schema)
+
+    # Digital Footprint - from social and competitor counts
+    digital_footprint = _assess_digital_footprint(schema)
+
+    pairs = [
+        ("Business Category", display_classification),
+        ("Primary Audience", primary_audience),
+        ("Content Strategy", content_strategy),
+        ("Brand Presence", brand_presence),
+        ("Technology Maturity", tech_maturity),
+        ("Content Depth", content_depth),
+        ("Digital Footprint", digital_footprint),
+    ]
+    display = [(key, value) for key, value in pairs if value and value != "Unknown"]
+    lines.append(key_value_pairs(display))
+    return "\n".join(lines), refs
+
+
+def _extract_audience_signals(schema: ScoutSchema) -> list[str]:
+    """Extract primary audience signals from content evidence."""
+    signals: set[str] = set()
+    audience_keywords = {
+        "developers": "Developers",
+        "developer": "Developers",
+        "students": "Students",
+        "student": "Students",
+        "engineers": "Engineering Teams",
+        "engineering": "Engineering Teams",
+        "teams": "Engineering Teams",
+        "team": "Engineering Teams",
+        "businesses": "Businesses",
+        "business": "Businesses",
+        "enterprise": "Enterprise",
+        "agencies": "Agencies",
+        "agency": "Agencies",
+        "creators": "Creators",
+        "publishers": "Publishers",
+        "consumers": "Consumers",
+        "customers": "Customers",
+        "users": "Users",
+        "teachers": "Educators",
+        "education": "Educators",
+        "learners": "Learners",
+        "researchers": "Researchers",
+        "startups": "Startups",
+        "founders": "Founders",
+        "investors": "Investors",
+        "marketers": "Marketers",
+        "designers": "Designers",
+        "freelancers": "Freelancers",
+        "owners": "Business Owners",
+        "everyone": "General Audience",
+        "all": "General Audience",
+    }
+    full_text = _collect_full_text(schema)
+    for keyword, label in audience_keywords.items():
+        if re.search(r"\b" + re.escape(keyword) + r"\b", full_text):
+            signals.add(label)
+    return sorted(signals)[:4]
+
+
+def _determine_content_strategy(schema: ScoutSchema) -> str:
+    """Determine content strategy from evidence."""
+    strategies: set[str] = set()
+    if any(
+        i.evidence_type == "RSS_FEED" or i.evidence_type == "ATOM_FEED"
+        for i in schema.metadata
+    ):
+        strategies.add("Content syndication")
+    if any(i.evidence_type == "CONTENT_HEADING" for i in schema.content):
+        text = " ".join(
+            _plain_text(i) for i in schema.content
+            if i.evidence_type == "CONTENT_HEADING"
+        )
+        if "tutorial" in text.lower() or "guide" in text.lower() or "learn" in text.lower():
+            strategies.add("Tutorials")
+        if "download" in text.lower():
+            strategies.add("Downloads")
+        if "news" in text.lower() or "blog" in text.lower() or "article" in text.lower():
+            strategies.add("News / Blog")
+        if "documentation" in text.lower() or "docs" in text.lower() or "reference" in text.lower():
+            strategies.add("Documentation")
+    if any(i.evidence_type == "CONTENT_FORM" for i in schema.content):
+        strategies.add("Lead generation")
+    if any(i.evidence_type in ("CONTENT_IMAGE", "CONTENT_VIDEO", "CONTENT_AUDIO")
+           for i in schema.content):
+        strategies.add("Media-rich content")
+    if not strategies:
+        return "Not enough evidence collected"
+    return ", ".join(sorted(strategies))
+
+
+def _assess_brand_presence(schema: ScoutSchema) -> str:
+    """Assess brand presence from metadata and social evidence."""
+    meta_score = len(schema.metadata)
+    social_score = len(schema.social)
+    if meta_score >= 5 and social_score >= 3:
+        return "Strong"
+    if meta_score >= 2 or social_score >= 1:
+        return "Moderate"
+    if meta_score == 0 and social_score == 0:
+        return "Not enough evidence collected"
+    return "Limited"
+
+
+def _assess_tech_maturity(schema: ScoutSchema) -> str:
+    """Assess technology maturity from technology evidence."""
+    if not schema.technology:
+        return "Not enough evidence collected"
+    seen_names: set[str] = set()
+    modern_indicators = 0
+    for item in schema.technology:
+        if isinstance(item.value, dict):
+            name = str(item.value.get("name", "")).lower()
+            if name and name not in seen_names:
+                seen_names.add(name)
+                if name in {
+                    "react", "next.js", "vue", "nuxt", "angular", "svelte",
+                    "wordpress", "shopify", "cloudflare", "nginx", "hsts",
+                    "csp", "x-frame-options", "x-content-type-options",
+                    "bootstrap", "tailwind css", "jquery", "google analytics",
+                    "gtm", "plausible", "matomo", "vercel", "netlify",
+                }:
+                    modern_indicators += 1
+    if modern_indicators >= 3:
+        return "Modern"
+    if modern_indicators >= 1:
+        return "Standard"
+    return "Basic"
+
+
+def _assess_content_depth(schema: ScoutSchema) -> str:
+    """Assess content depth from content evidence counts."""
+    content_count = len(schema.content)
+    if content_count >= 50:
+        return "Extensive"
+    if content_count >= 10:
+        return "Moderate"
+    if content_count >= 1:
+        return "Limited"
+    return "Not enough evidence collected"
+
+
+def _assess_digital_footprint(schema: ScoutSchema) -> str:
+    """Assess digital footprint from social and competitor evidence."""
+    social_count = len(schema.social)
+    competitor_count = len(schema.competitors)
+    total = social_count + competitor_count
+    if total >= 5:
+        return "High"
+    if total >= 2:
+        return "Moderate"
+    if total >= 1:
+        return "Limited"
+    return "Not enough evidence collected"
+
+
+def _build_technology_maturity(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the Technology Maturity section."""
+    lines: list[str] = []
+    refs: list[str] = []
+
+    if not schema.technology:
+        lines.append("No technology evidence was collected during this scan.")
+        return "\n".join(lines), refs
+
+    seen_names: set[str] = set()
+    categories: set[str] = set()
+    security_signals = False
+    cdn_signals = False
+    modern_frontend = False
+    performance_signals = False
+
+    for item in schema.technology:
+        if isinstance(item.value, dict):
+            name = str(item.value.get("name", ""))
+            category = str(item.value.get("category", ""))
+            if name and name not in seen_names:
+                seen_names.add(name)
+                categories.add(category)
+            if category in ("security", "infrastructure"):
+                security_signals = True
+            if category in ("infrastructure", "cdn", "hosting"):
+                cdn_signals = True
+            if category in ("frontend", "framework", "css framework"):
+                modern_frontend = True
+            if name.lower() in {
+                "hsts", "csp", "x-frame-options",
+                "x-content-type-options", "preload"
+            }:
+                performance_signals = True
+            if item.evidence_id:
+                refs.append(item.evidence_id)
+
+    # Infrastructure
+    infrastructure = (
+        "Modern" if cdn_signals else "Standard" if categories
+        else "Not enough evidence collected"
+    )
+    # Security
+    security = (
+        "Strong" if security_signals else "Standard" if categories
+        else "Not enough evidence collected"
+    )
+    # Client Technologies
+    client = (
+        "Modern" if modern_frontend else "Standard" if categories
+        else "Not enough evidence collected"
+    )
+    # Performance Signals
+    performance = (
+        "Detected" if performance_signals
+        else "Not detected" if categories
+        else "Not enough evidence collected"
+    )
+
+    rows = [
+        ["Infrastructure", infrastructure],
+        ["Security", security],
+        ["Client Technologies", client],
+        ["Performance Signals", performance],
+    ]
+    lines.append(table(["Area", "Assessment"], rows))
+    return "\n".join(lines), refs
+
+
+def _classification_confidence_label(confidence: str) -> str:
+    """Map classification confidence string to executive label."""
+    if "multiple matching signals" in confidence:
+        return "High"
+    if "limited available signals" in confidence:
+        return "Low"
+    return confidence
+
+
+def _build_classification_details(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build classification confidence and rationale."""
+    lines: list[str] = []
+    refs: list[str] = []
+
+    classification, confidence = _classify_target(schema)
+    confidence_label = _classification_confidence_label(confidence)
+
+    lines.append("### Classification Confidence")
+    lines.append("")
+    lines.append(confidence_label)
+    lines.append("")
+
+    lines.append("### Classification Based On")
+    lines.append("")
+
+    # Deterministic signals that contributed to classification
+    signals: list[str] = []
+    full_text = _collect_full_text(schema)
+    title_text = ""
+    for item in schema.seo:
+        if item.evidence_type == "SEO_TITLE" and isinstance(item.value, str):
+            title_text = item.value.lower()
+            break
+
+    if "documentation" in full_text or "docs" in full_text or "tutorial" in full_text:
+        signals.append("Documentation content")
+    if "api reference" in full_text or "reference" in full_text:
+        signals.append("Reference material")
+    if any(name in title_text or name in full_text
+           for name in ["python", "java", "javascript", "typescript",
+                        "ruby", "go", "rust", "php"]):
+        signals.append("Programming language association")
+    if any(word in full_text
+           for word in ["developer", "developers", "engineering",
+                        "engineering team"]):
+        signals.append("Developer ecosystem")
+    if any(item.evidence_type == "OPEN_GRAPH" for item in schema.seo):
+        signals.append("Official branding")
+    if len(schema.technology) >= 3:
+        signals.append("Multiple supporting signals")
+    if any(item.evidence_type in ("RSS_FEED", "ATOM_FEED") for item in schema.metadata):
+        signals.append("Content feeds")
+    if any(item.evidence_type == "SITE_NAME" for item in schema.metadata):
+        signals.append("Brand identity")
+
+    if not signals:
+        signals.append("General website signals")
+
+    for signal in sorted(signals)[:6]:
+        lines.append(f"- {signal}")
+    return "\n".join(lines), refs
+
+
+def _build_content_keywords(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the Top Keywords section from content evidence."""
+    lines: list[str] = []
+    refs: list[str] = []
+
+    if not schema.content and not schema.seo:
+        return "\n".join(lines), refs
+
+    word_counts: Counter[str] = Counter()
+    stop_words = {
+        "the", "and", "for", "with", "from", "that", "this", "have", "has", "been",
+        "were", "was", "are", "not", "but", "they", "their", "will", "would", "can",
+        "all", "your", "more", "some", "what", "when", "how", "why", "which", "each",
+        "also", "than", "other", "into", "over", "such", "after", "before", "between",
+        "under", "again", "further", "then", "once", "here", "there", "where",
+        "about", "against", "through", "during", "above", "below",
+        "up", "down", "out", "off", "even", "since", "until", "while",
+        "accept", "close", "search", "menu", "toggle", "skip", "back", "top",
+    }
+
+    for item in schema.content:
+        text = _plain_text(item)
+        words = re.findall(r"[a-zA-Z]{3,}", text)
+        for word in words:
+            lower = word.lower()
+            if lower not in stop_words and len(lower) > 2:
+                word_counts[lower] += 1
+
+    for item in schema.seo:
+        if item.evidence_type == "SEO_TITLE" and isinstance(item.value, str):
+            words = re.findall(r"[a-zA-Z]{3,}", item.value.lower())
+            for word in words:
+                if word not in stop_words and len(word) > 2:
+                    word_counts[word] += 2
+
+    top_keywords = [word.title() for word, _ in word_counts.most_common(10)]
+    if top_keywords:
+        lines.append("### Top Keywords")
+        lines.append("")
+        lines.append(", ".join(top_keywords))
+        lines.append("")
+    return "\n".join(lines), refs
+
+
+def _build_content_topics(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the Primary Topics section with star ratings."""
+    lines: list[str] = []
+    refs: list[str] = []
+
+    if not schema.content:
+        return "\n".join(lines), refs
+
+    topic_counts: Counter[str] = Counter()
+    for item in schema.content:
+        if item.evidence_type == "CONTENT_HEADING":
+            text = _plain_text(item)
+            words = text.split()
+            if len(words) >= 2:
+                topic_counts[" ".join(words[:3]).title()] += 1
+
+    if not topic_counts:
+        return "\n".join(lines), refs
+
+    lines.append("### Primary Topics")
+    lines.append("")
+    max_count = max(topic_counts.values()) if topic_counts else 1
+    for topic, count in topic_counts.most_common(8):
+        stars = "★" * max(1, round(count / max_count * 5))
+        lines.append(f"{stars} {topic}")
+    lines.append("")
+    return "\n".join(lines), refs
+
+
+def _build_social_presence_improved(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the improved Social Presence section."""
+    lines: list[str] = []
+    refs: list[str] = []
+
+    if not schema.social:
+        lines.append("No social profiles were detected during this scan.")
+        return "\n".join(lines), refs
+
+    known_platforms = [
+        "GitHub", "X", "Facebook", "LinkedIn", "Instagram", "YouTube",
+        "Bluesky", "Mastodon", "Threads", "TikTok", "Snapchat", "WhatsApp",
+        "Telegram", "Behance", "Dribbble", "Flickr", "Twitch",
+    ]
+    detected_platforms: set[str] = set()
+    platform_urls: dict[str, str] = {}
+
+    for item in schema.social:
+        val = item.value
+        if isinstance(val, dict):
+            platform = str(val.get("platform", "Unknown"))
+            url = str(val.get("url", ""))
+        else:
+            platform = "Unknown"
+            url = str(val)
+        detected_platforms.add(platform)
+        if url:
+            platform_urls[platform] = url
+        if item.evidence_id:
+            refs.append(item.evidence_id)
+
+    rows = []
+    for platform in known_platforms:
+        detected = "✓" if platform in detected_platforms else "—"
+        url = platform_urls.get(platform, "")
+        display_platform = f"[{platform}]({url})" if url else platform
+        rows.append([display_platform, detected])
+
+    lines.append(table(["Platform", "Detected"], rows))
+    return "\n".join(lines), refs
+
+
+def _build_recommendations_improved(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the Executive Recommendations section with priority and impact."""
+    lines: list[str] = []
+    refs: list[str] = []
+
+    recommendations: list[tuple[str, str, str]] = []
+    scan_status, _, limitations = _scan_status(schema)
+    is_limited = scan_status in ("limited", "none")
+
+    if is_limited:
+        recommendations.append(
+            ("Low", "Unable to verify recommendations due to limited scan coverage",
+             "Re-scan with fewer restrictions for actionable recommendations")
+        )
+    else:
+        if schema.seo:
+            seo_types = {i.evidence_type for i in schema.seo}
+            if "OPEN_GRAPH" not in seo_types:
+                recommendations.append(
+                    ("High", "Add Open Graph metadata",
+                     "Richer previews when shared socially")
+                )
+            if "TWITTER_CARD" not in seo_types:
+                recommendations.append(
+                    ("High", "Add Twitter Cards",
+                     "Better previews when shared on X/Twitter")
+                )
+            if "STRUCTURED_DATA" not in seo_types:
+                recommendations.append(
+                    ("Medium", "Implement structured data (JSON-LD)",
+                     "Help search engines show rich results")
+                )
+            if "CANONICAL" not in seo_types:
+                recommendations.append(
+                    ("Medium", "Add canonical URLs",
+                     "Reduce duplicate indexing")
+                )
+            if "SEO_TITLE" not in seo_types:
+                recommendations.append(
+                    ("High", "Add page titles",
+                     "Essential for search visibility")
+                )
+            if "META_DESCRIPTION" not in seo_types:
+                recommendations.append(
+                    ("High", "Add meta descriptions",
+                     "Improve click-through rates")
+                )
+
+        if not schema.social:
+            recommendations.append(
+                ("Medium", "Establish social media profiles",
+                 "Increase brand visibility and referral traffic")
+            )
+
+        if schema.content and len(schema.content) < 5:
+            recommendations.append(
+                ("Medium", "Increase content volume",
+                 "Improve organic search visibility and engagement")
+            )
+
+    if not recommendations:
+        recommendations.append(
+            ("Low", "No specific recommendations from this scan",
+             "Continue monitoring performance")
+        )
+
+    lines.append(table(["Priority", "Recommendation", "Business Impact"], recommendations))
+    return "\n".join(lines), refs
+
+
+def _build_strengths_improved(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the Top Strengths section."""
     strengths: list[str] = []
     refs: list[str] = []
 
     if schema.seo:
         seo_types = {i.evidence_type for i in schema.seo}
-        checks = ["SEO_TITLE", "META_DESCRIPTION", "CANONICAL", "ROBOTS", "LANGUAGE", "CHARSET"]
+        checks = [
+            "SEO_TITLE", "META_DESCRIPTION", "CANONICAL", "ROBOTS",
+            "LANGUAGE", "CHARSET", "VIEWPORT", "OPEN_GRAPH", "TWITTER_CARD",
+        ]
         passed = sum(1 for c in checks if c in seo_types)
         if passed >= 4:
-            strengths.append("Strong SEO implementation - the site is optimized for search engines")
+            strengths.append(
+                "Strong on-page SEO signals were detected, improving search visibility"
+            )
             seo_refs = [
-                i.evidence_id
-                for i in schema.seo
+                i.evidence_id for i in schema.seo
                 if i.evidence_type in checks[:passed] and i.evidence_id
             ]
             refs.extend(seo_refs)
@@ -1042,9 +1944,11 @@ def _build_strengths(schema: ScoutSchema) -> tuple[str, list[str]]:
     if schema.metadata:
         meta_types = {i.evidence_type for i in schema.metadata}
         if "SITE_NAME" in meta_types:
-            strengths.append("Rich structured metadata - search engines understand the brand")
+            strengths.append("Brand identity is clearly defined through metadata")
         if len(meta_types) >= 3:
-            strengths.append("Comprehensive metadata profile - strong foundation for SEO")
+            strengths.append(
+                "A rich metadata profile was detected, supporting SEO and device integration"
+            )
 
     if schema.technology:
         seen_names: set[str] = set()
@@ -1056,10 +1960,14 @@ def _build_strengths(schema: ScoutSchema) -> tuple[str, list[str]]:
                     seen_names.add(raw_name)
                     unique_count += 1
         if unique_count >= 2:
-            strengths.append("Modern web infrastructure - reliable and scalable technology")
+            strengths.append(
+                f"Multiple technologies detected ({unique_count}), indicating a modern stack"
+            )
 
     if schema.content and len(schema.content) >= 5:
-        strengths.append("Large content footprint - good for organic search and engagement")
+        strengths.append(
+            "Substantial content was extracted, supporting organic search and engagement"
+        )
 
     if schema.social:
         seen_urls: set[str] = set()
@@ -1071,119 +1979,130 @@ def _build_strengths(schema: ScoutSchema) -> tuple[str, list[str]]:
                     seen_urls.add(url)
                     unique_count += 1
         if unique_count >= 1:
-            strengths.append("Active social presence - brand is visible on social platforms")
+            strengths.append(
+                f"Active social presence detected on {unique_count} platform(s)"
+            )
 
     if schema.competitors:
-        strengths.append("Competitive awareness - market positioning is being tracked")
+        strengths.append("Competitive references were identified, supporting market positioning")
 
-    if not strengths:
-        strengths.append("No specific strengths detected from current evidence")
-
-    lines = bullet_list(strengths)
+    top_strengths = strengths[:5]
+    lines = bullet_list([f"✓ {s}" for s in top_strengths])
     lines += "\n\n**Business Takeaway**\n"
-    if strengths:
-        first_strength = strengths[0].split(" - ")[0]
-        lines += f"The biggest strength is {first_strength}. This gives the website a competitive advantage."
+    if top_strengths:
+        first = top_strengths[0].split(" - ")[0].split(" (")[0]
+        lines += (
+            f"The clearest strength is {first.lower()}. "
+            "This gives the website a measurable advantage to build on."
+        )
     else:
-        lines += "No clear strengths detected. Focus on building foundational SEO and content."
-
+        lines += (
+            "No specific strengths could be confirmed from the evidence collected "
+            "in this scan. A broader or less restricted scan may surface additional "
+            "strengths."
+        )
     return lines, refs
 
 
-def _build_weaknesses(schema: ScoutSchema) -> tuple[str, list[str]]:
-    """Build the Weaknesses section."""
-    weaknesses: list[str] = []
+def _build_weaknesses_improved(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the Improvement Opportunities section."""
+    opportunities: list[tuple[str, str, str]] = []
     refs: list[str] = []
 
+    scan_status, _, limitations = _scan_status(schema)
+    is_limited = scan_status in ("limited", "none")
+    limitation_note = (
+        " This may reflect scan limitations rather than a website gap."
+        if is_limited and limitations
+        else ""
+    )
+
     if not schema.seo:
-        weaknesses.append("No SEO signals detected - the site may be invisible to search engines")
+        opportunities.append(
+            ("High", "No on-page SEO evidence was collected during this scan",
+             "Cannot assess search visibility")
+        )
     else:
         seo_types = {i.evidence_type for i in schema.seo}
         required = ["SEO_TITLE", "META_DESCRIPTION", "CANONICAL"]
         missing = [r for r in required if r not in seo_types]
         if "SEO_TITLE" in missing:
-            weaknesses.append("Missing page title - reduces search visibility and click-through rate")
+            opportunities.append(
+                ("High", "Page title was not detected",
+                 "Essential for search visibility and browser tabs")
+            )
         if "META_DESCRIPTION" in missing:
-            weaknesses.append("Missing meta description - reduces click-through rate from search")
+            opportunities.append(
+                ("High", "Meta description was not detected",
+                 "Influences search click-through rate")
+            )
         if "CANONICAL" in missing:
-            weaknesses.append("Missing canonical URL - risks duplicate content penalties")
+            opportunities.append(
+                ("Medium", "Canonical URL was not detected",
+                 "Helps search engines consolidate duplicate pages")
+            )
+        if "OPEN_GRAPH" not in seo_types:
+            opportunities.append(
+                ("Medium", "Open Graph metadata was not detected",
+                 "Richer previews when shared socially")
+            )
+        if "TWITTER_CARD" not in seo_types:
+            opportunities.append(
+                ("Medium", "Twitter Cards not detected",
+                 "Better previews when shared on X/Twitter")
+            )
+        if "STRUCTURED_DATA" not in seo_types:
+            opportunities.append(
+                ("Low", "Structured data was not detected",
+                 "Missed opportunity for rich search results")
+            )
 
     if not schema.metadata:
-        weaknesses.append("No metadata detected - weak brand presence in search results")
-
+        opportunities.append(
+            ("Medium", "No brand metadata was collected during this scan",
+             "Limited brand presence in search and devices")
+        )
     if not schema.technology:
-        weaknesses.append("No technology stack identified - infrastructure is unknown")
-
+        opportunities.append(
+            ("Low", "No technology evidence was collected during this scan",
+             "Cannot assess technical stack")
+        )
     if not schema.social:
-        weaknesses.append("No social profiles detected - missed opportunities for engagement and traffic")
+        opportunities.append(
+            ("Medium", "No social profiles were detected during this scan",
+             "Limited brand visibility and referral traffic")
+        )
+    if not schema.content:
+        opportunities.append(
+            ("Low", "No page content was collected during this scan",
+             "Limited organic search potential")
+        )
 
-    if schema.seo:
-        seo_types = {i.evidence_type for i in schema.seo}
-        if "OPEN_GRAPH" not in seo_types:
-            weaknesses.append("Missing Open Graph - pages show poor previews when shared on social media")
-        if "TWITTER_CARD" not in seo_types:
-            weaknesses.append("Missing Twitter Cards - reduced engagement when shared on X/Twitter")
+    if is_limited and limitations:
+        opportunities = [
+            (priority, f"{title}.{limitation_note}", benefit)
+            for priority, title, benefit in opportunities
+        ]
 
-    if not weaknesses:
-        weaknesses.append("No weaknesses detected from current evidence")
-
-    lines = bullet_list(weaknesses)
+    lines = table(["Priority", "Improvement Opportunity", "Potential Benefit"], opportunities)
     lines += "\n\n**Business Takeaway**\n"
-    if len(weaknesses) <= 2:
-        lines += "Minor gaps identified. Addressing these will improve search and social performance."
+    if len(opportunities) <= 2:
+        lines += (
+            "Only minor gaps were identified. Addressing these will further improve "
+            "search and social performance."
+        )
     else:
-        lines += f"{len(weaknesses)} gaps identified. Prioritize the first two for quickest impact."
-
+        high_priority = sum(1 for o in opportunities if o[0] == "High")
+        lines += (
+            f"{len(opportunities)} improvement opportunities were identified. "
+            f"{high_priority} high-priority item(s) should be addressed "
+            "first for the quickest result."
+        )
     return lines, refs
 
 
-def _build_recommendations(schema: ScoutSchema) -> tuple[str, list[str]]:
-    """Build the Recommendations section."""
-    recommendations: list[str] = []
-    refs: list[str] = []
-
-    if schema.seo:
-        seo_types = {i.evidence_type for i in schema.seo}
-        if "OPEN_GRAPH" not in seo_types:
-            recommendations.append("Add Open Graph metadata so pages display richer previews when shared on social platforms")
-        if "TWITTER_CARD" not in seo_types:
-            recommendations.append("Add Twitter Cards metadata to improve engagement when shared on X/Twitter")
-        if "STRUCTURED_DATA" not in seo_types:
-            recommendations.append("Implement structured data (JSON-LD) to help search engines display rich results")
-
-    if schema.technology:
-        seen_names: set[str] = set()
-        has_cms = False
-        for item in schema.technology:
-            if isinstance(item.value, dict):
-                raw_name = item.value.get("name", "")
-                if isinstance(raw_name, str):
-                    name = raw_name.lower()
-                    if name and name not in seen_names:
-                        seen_names.add(name)
-                        if name in {"wordpress", "drupal", "joomla"}:
-                            has_cms = True
-        if not has_cms and len(seen_names) < 2:
-            recommendations.append("Consider adopting a modern CMS to simplify content updates and SEO management")
-
-    if not schema.social:
-        recommendations.append("Establish social media profiles to increase brand visibility and drive referral traffic")
-
-    if schema.content and len(schema.content) < 5:
-        recommendations.append("Increase content volume to improve organic search visibility and user engagement")
-
-    if not recommendations:
-        recommendations.append("No specific recommendations at this time. Continue monitoring performance.")
-
-    lines = bullet_list(recommendations)
-    lines += "\n\n**Business Takeaway**\n"
-    lines += "These recommendations are prioritized by impact. Start with the first item for quickest results."
-
-    return lines, refs
-
-
-def _build_diagnostics(schema: ScoutSchema) -> tuple[str, list[str]]:
-    """Build the Diagnostics section."""
+def _build_technical_diagnostics(schema: ScoutSchema) -> tuple[str, list[str]]:
+    """Build the Technical Diagnostics section."""
     lines: list[str] = []
     refs: list[str] = []
 
@@ -1203,19 +2122,20 @@ def _build_diagnostics(schema: ScoutSchema) -> tuple[str, list[str]]:
         "competitor_items",
     ):
         if key in diagnostics:
-            label = key.replace("_", " ").title()
+            label = "Technology Signals" if key == "technology_items" else humanize_label(key)
             rows.append([label, str(diagnostics[key])])
 
     if "build_timestamp" in diagnostics:
         rows.append(["Scan Timestamp", str(diagnostics["build_timestamp"])])
+    if "sitemap_pages_found" in diagnostics:
+        rows.append(["Sitemap Pages Found", str(diagnostics["sitemap_pages_found"])])
 
     lines.append(table(["Metric", "Value"], rows))
-    lines.append("")
-    lines.append("**Business Takeaway**")
-    lines.append("")
-    lines.append("These metrics show how much data was collected during the scan. "
-                  "Higher counts mean more data was available for analysis.")
-
+    if schema.evidence:
+        lines.append(
+            "*Evidence appendix shows a sample of collected items. "
+            "Full evidence is available in the JSON export.*"
+        )
     return "\n".join(lines), refs
 
 
@@ -1226,22 +2146,37 @@ def _build_evidence_appendix(schema: ScoutSchema) -> tuple[str, list[str]]:
 
     items = schema.evidence[:20]
     if not items:
-        lines.append("No evidence collected.")
+        lines.append("No evidence was collected.")
         return "\n".join(lines), refs
 
-    rows: list[list[str]] = []
+    seen_values: set[str] = set()
+    diverse_items: list[EvidenceItem] = []
     for item in items:
+        value_key = humanize_value(item.value, empty="")
+        if value_key not in seen_values:
+            seen_values.add(value_key)
+            diverse_items.append(item)
+        if len(diverse_items) >= 20:
+            break
+
+    rows: list[list[str]] = []
+    for item in diverse_items:
         evidence_id = item.evidence_id or "N/A"
-        evidence_type = item.evidence_type
-        source = item.extractor_source
-        value = _get_evidence_value(item)
-        if len(value) > 80:
-            value = value[:77] + "..."
+        evidence_type = humanize_label(item.evidence_type)
+        source = humanize_label(item.extractor_source)
+        value = humanize_value(item.value, empty="")
+        if len(value) > 120:
+            value = truncate_text(value, 120)
         rows.append([evidence_id, evidence_type, source, value])
         if item.evidence_id:
             refs.append(item.evidence_id)
 
     lines.append(table(["ID", "Type", "Source", "Value"], rows))
+    lines.append("")
+    lines.append(
+        f"*Showing {len(diverse_items)} of {len(schema.evidence)} evidence "
+        "items. Full evidence is available in the JSON export.*"
+    )
     return "\n".join(lines), refs
 
 
@@ -1254,33 +2189,36 @@ def _build_footer() -> tuple[str, list[str]]:
     lines.append("")
     lines.append("Generated by AIFME Scout OSS")
     lines.append("")
-    lines.append("For advanced marketing intelligence and strategic recommendations, explore the AIFME Platform.")
+    lines.append(
+        "All findings are derived deterministically from collected evidence. "
+        "No AI inference or external services were used to produce this report."
+    )
     return "\n".join(lines), []
 
 
 def _build_template_summary(schema: ScoutSchema) -> tuple[str, list[str]]:
-    """Build a complete template-based summary from schema evidence.
-
-    Returns:
-        (text, evidence_refs) tuple.
-    """
+    """Build a complete template-based summary from schema evidence."""
     sections_text: list[str] = []
     all_refs: list[str] = []
 
     section_builders = [
+        ("Executive Scorecard", _build_executive_scorecard),
         ("Executive Summary", _build_executive_summary),
-        ("Health Score", _build_health_score),
+        ("Business Snapshot", _build_business_snapshot),
+        ("Signal Coverage", _build_health_score),
         ("Website Overview", _build_website_overview),
+        ("Scan Limitations", _build_scan_limitations),
         ("SEO Analysis", _build_seo_analysis),
         ("Metadata Analysis", _build_metadata_analysis),
         ("Technology Stack", _build_technology_stack),
+        ("Technology Maturity", _build_technology_maturity),
         ("Content Analysis", _build_content_analysis),
         ("Social Presence", _build_social_presence),
         ("Competitive Signals", _build_competitive_signals),
-        ("Strengths", _build_strengths),
-        ("Weaknesses", _build_weaknesses),
-        ("Recommendations", _build_recommendations),
-        ("Diagnostics", _build_diagnostics),
+        ("Top Strengths", _build_strengths),
+        ("Improvement Opportunities", _build_weaknesses),
+        ("Executive Recommendations", _build_recommendations),
+        ("Technical Diagnostics", _build_technical_diagnostics),
         ("Evidence Appendix", _build_evidence_appendix),
     ]
 
@@ -1295,17 +2233,22 @@ def _build_template_summary(schema: ScoutSchema) -> tuple[str, list[str]]:
         sections_text.append(footer_text)
         all_refs.extend(footer_refs)
 
-    full_text = join_sections(sections_text)
+    full_text = "\n".join(
+        [
+            _build_title(schema),
+            "",
+            join_sections(sections_text),
+        ]
+    )
     deduplicated_refs = list(dict.fromkeys(all_refs))
-
     return full_text, deduplicated_refs
 
 
 def _summarize_llm(schema: ScoutSchema) -> tuple[str, list[str]]:
     """Attempt LLM-backed summary generation.
 
-    In this milestone LLM mode is not implemented. This function exists
-    as the integration point and always falls back to template mode.
+    In this milestone LLM mode is not implemented. This function exists as the
+    integration point and always falls back to template mode.
     """
     return _build_template_summary(schema)
 
@@ -1316,22 +2259,44 @@ def summarize(
 ) -> Summary:
     """Produce a descriptive evidence-linked summary from a ScoutSchema.
 
-    Every claim in the returned summary traces to one or more Evidence
-    IDs in the input schema. No claim is invented or inferred beyond
-    the collected evidence.
-
-    Args:
-        schema: The assembled ScoutSchema from the Schema Builder.
-        mode: Summary generation mode. ``no-llm`` produces a
-            deterministic template-based summary. ``llm`` falls back
-            to the same template summary when no provider is available.
-
-    Returns:
-        Summary with text and evidence references.
+    Every claim in the returned summary traces to one or more Evidence IDs in
+    the input schema. No claim is invented or inferred beyond the collected
+    evidence.
     """
     if mode == ScanMode.LLM:
         text, evidence_refs = _summarize_llm(schema)
     else:
         text, evidence_refs = _build_template_summary(schema)
 
-    return Summary(text=text, evidence_refs=evidence_refs)
+    status, status_label, _ = _scan_status(schema)
+    _, coverage = _compute_health_score(schema)
+    classification, _ = _classify_target(schema)
+
+    return Summary(
+        text=text,
+        evidence_refs=evidence_refs,
+        scan_status=status_label,
+        confidence=_scan_confidence(schema, status, coverage),
+        scan_coverage=float(coverage),
+        target_classification=classification,
+    )
+
+
+def _scan_confidence(schema: ScoutSchema, status: str, coverage: int) -> str:
+    """Derive a plain-language confidence label for the scan."""
+    _, _, limitations = _scan_status(schema)
+    if status == "none":
+        return "None"
+    if limitations:
+        return "Low"
+    if coverage >= 90 and status == "complete":
+        return "High"
+    if coverage >= 70:
+        return "Medium"
+    return "Low"
+
+
+def _filter_navigation_noise(text: str) -> bool:
+    """Return True if the text should be filtered out as navigation noise."""
+    lower = text.lower().strip()
+    return lower in _NAVIGATION_NOISE or lower.startswith("back to") or len(lower) <= 2

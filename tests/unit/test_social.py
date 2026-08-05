@@ -209,6 +209,66 @@ class TestDeterministic:
         assert _get_profiles(result, "https://example.com/about") == []
 
 
+class TestExtendedPlatforms:
+    def test_bluesky_detected(self) -> None:
+        html = _load_fixture("social-extended.html")
+        result = _parse(html)
+        assert "Bluesky" in _platforms(_get_profiles(result))
+
+    def test_mastodon_detected(self) -> None:
+        html = _load_fixture("social-extended.html")
+        result = _parse(html)
+        assert "Mastodon" in _platforms(_get_profiles(result))
+
+    def test_twitch_detected(self) -> None:
+        html = _load_fixture("social-extended.html")
+        result = _parse(html)
+        assert "Twitch" in _platforms(_get_profiles(result))
+
+    def test_whatsapp_detected(self) -> None:
+        html = _load_fixture("social-extended.html")
+        result = _parse(html)
+        assert "WhatsApp" in _platforms(_get_profiles(result))
+
+    def test_telegram_detected(self) -> None:
+        html = _load_fixture("social-extended.html")
+        result = _parse(html)
+        assert "Telegram" in _platforms(_get_profiles(result))
+
+    def test_behance_detected(self) -> None:
+        html = _load_fixture("social-extended.html")
+        result = _parse(html)
+        assert "Behance" in _platforms(_get_profiles(result))
+
+    def test_dribbble_detected(self) -> None:
+        html = _load_fixture("social-extended.html")
+        result = _parse(html)
+        assert "Dribbble" in _platforms(_get_profiles(result))
+
+    def test_flickr_detected(self) -> None:
+        html = _load_fixture("social-extended.html")
+        result = _parse(html)
+        assert "Flickr" in _platforms(_get_profiles(result))
+
+
+class TestJsonLdSameAs:
+    def test_json_ld_sameas_detected(self) -> None:
+        html = _load_fixture("social-extended.html")
+        result = _parse(html)
+        profiles = _get_profiles(result)
+        platforms = _platforms(profiles)
+        assert "Bluesky" in platforms
+        assert "Mastodon" in platforms
+
+
+class TestSocialIconDetection:
+    def test_icon_class_detection(self) -> None:
+        html = _load_fixture("social-extended.html")
+        result = _parse(html)
+        profiles = _get_profiles(result)
+        assert any(p.detection_method == "icon_class" for p in profiles)
+
+
 class TestEmptyPage:
     def test_empty_page_returns_empty_profiles(self) -> None:
         html = "<html><body></body></html>"

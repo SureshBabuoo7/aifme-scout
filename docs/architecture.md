@@ -1,387 +1,162 @@
 # Architecture
 
-This document describes the implemented modules in AIFME Scout OSS.
+AIFME Scout OSS follows a deterministic, stateless pipeline. The same orchestration logic is shared by the CLI and REST API through a single Request Handler.
 
-## Implemented Modules
+## Design Principles
 
-### Website Scanner (`src/scanner/`)
+- **Deterministic** — Identical input produces identical output
+- **Stateless** — No in-memory state between scans
+- **Immutable** — All data models are frozen dataclasses
+- **Thread-safe** — No mutable shared state
+- **Provenance-tracked** — Every evidence item traces to its source
 
-The Website Scanner fetches website resources safely and deterministically.
+## Pipeline
 
-**Public interface:**
-- `ScannerService.scan(url, options) -> RawSite`
-- `scan(url, options) -> RawSite` (synchronous wrapper)
+```
+┌─────────────────┐
+│  Website Scanner │──────┐
+└─────────────────┘      │
+                         ▼
+┌─────────────────┐  ┌───────────┐
+│   HTML Parser   │──▶│   RawSite │
+└─────────────────┘  └─────┬─────┘
+                          │
+          ┌───────────────┼───────────────┐
+          ▼               ▼               ▼
+    ┌──────────┐   ┌──────────┐   ┌──────────┐
+    │   SEO    │   │ Metadata │   │Technology │
+    │Extractor │   │Extractor │   │ Detector  │
+    └────┬─────┘   └────┬─────┘   └────┬─────┘
+         │               │               │
+         ▼               ▼               ▼
+    ┌──────────┐   ┌──────────┐   ┌──────────┐
+    │ Content  │   │  Social  │   │Competitor│
+    │Extractor │   │Discovery │   │Discovery │
+    └────┬─────┘   └────┬─────┘   └────┬─────┘
+         │               │               │
+         └───────────────┼───────────────┘
+                         ▼
+                  ┌─────────────┐
+                  │   Evidence  │
+                  │  Collector  │
+                  └──────┬──────┘
+                         │
+                         ▼
+                  ┌─────────────┐
+                  │   Schema    │
+                  │   Builder   │
+                  └──────┬──────┘
+                         │
+                         ▼
+                  ┌─────────────┐
+                  │   Summary   │
+                  │   Builder   │
+                  └──────┬──────┘
+                         │
+            ┌────────────┴────────────┐
+            ▼                         ▼
+      ┌──────────┐            ┌──────────┐
+      │   JSON   │            │ Markdown │
+      │ Exporter │            │ Exporter │
+      └──────────┘            └──────────┘
+```
 
-**Data models:**
-- `RawPage` — transport metadata for a single fetched page
-- `RawSite` — complete scan output
-- `RobotsPolicy` — resolved robots.txt rules
+## Modules
 
-**Error hierarchy:**
-- `ScannerError` (base)
-  - `FetchError`
-  - `SSRFViolationError`
-  - `RobotsDisallowedError`
-  - `ResponseTooLargeError`
-  - `UnsupportedContentTypeError`
-  - `InvalidURLError`
+### Request Handler (`engine/`)
 
-**Responsibilities:**
+The single orchestration entry point for both CLI and REST API.
+
+- `handle(request) -> ScanResult` — Validates, orchestrates, and assembles the final result
+- No pipeline logic is duplicated across interfaces
+
+### Website Scanner (`scanner/`)
+
+Fetches website resources safely and deterministically.
+
 - HTTP GET with configurable timeout
 - Safe redirect following
-- User-Agent header support
 - robots.txt awareness
-- HTTPS support
-- Content-Type validation
-- Maximum response size protection
 - SSRF protection
+- Retry logic with exponential backoff
+- Anti-bot challenge detection
 
-### HTML Parser (`src/parser/`)
+### HTML Parser (`parser/`)
 
 Converts raw HTML into a deterministic, navigable DOM tree.
 
-**Public interface:**
-- `parse(RawSite) -> ParsedSite`
-
-**Data models:**
-- `ParsedSite` — parsed site output
-- `ParsedPage` — parsed page with root, head, body
-- `Element` — navigable DOM element wrapper
-- `ParseWarning` — non-fatal parsing warning
-- `ParseError` — fatal parse failure
-
-**Responsibilities:**
-- Parse HTML with lenient recovery
-- Build navigable DOM tree
-- Isolate head/body regions
+- Lenient malformed HTML recovery
+- Head/body region isolation
 - Character encoding handling
-- Malformed HTML recovery
 
-**Deferred by design:**
-- Metadata extraction
-- Competitor discovery
-- Summary Builder
-- Exporters
+### Extractor Modules (`extractors/`)
 
-### Evidence Collector (`src/extractors/evidence.py`)
+| Module | Purpose |
+|--------|---------|
+| SEO | On-page SEO signals (titles, meta, canonical, Open Graph, Twitter Cards, hreflang, AMP) |
+| Metadata | Structured head metadata (favicons, language, manifests, feeds, verification tags) |
+| Technology | Framework, CMS, server, analytics, CSS, CDN, and security header detection |
+| Content | Structured body content (headings, paragraphs, lists, tables, images, links, forms) |
+| Social | Platform detection from page links, JSON-LD sameAs, icon classes |
+| Competitors | Explicit declarations, "vs" headings, schema.org markup, user-supplied lists |
+| Evidence | Normalization, deterministic IDs, duplicate elimination, provenance preservation |
+| Schema | ScoutSchema assembly and JSON Schema validation |
 
-Normalizes extractor outputs into a common evidence model.
+### Engine (`engine/`)
 
-**Public interface:**
-- `collect(seo_result, metadata_result, technology_result, content_result, social_result, competitor_result, target_url) -> EvidenceCollection`
+- `summary.py` — Deterministic, evidence-linked summary generation
+- `request_handler.py` — Pipeline orchestration and configuration resolution
 
-**Data models:**
-- `EvidenceCollection` — complete evidence collection for a site
-- `EvidenceItem` — normalized evidence item from any extractor
-- `EvidenceProvenance` — unified provenance for an evidence item
+### Exporters (`exporters/`)
 
-**Responsibilities:**
-- Evidence normalization from all extractors
-- Evidence ID generation
-- Deterministic ordering
-- Duplicate elimination
-- Provenance preservation
-- Confidence preservation from upstream extractors
+| Exporter | Purpose |
+|----------|---------|
+| JSON | Schema-validated, pretty-printed, stable key ordering |
+| Markdown | CEO-grade executive intelligence reports |
 
-**Deferred by design:**
-- Schema Builder
-- Summary Builder
-- CLI behavior
-- REST API behavior
+### CLI (`cli/`)
 
-### Social Discovery (`src/extractors/social.py`)
+Full-featured command-line interface:
 
-Finds linked social profiles from parsed page links.
+- Configuration precedence: CLI flags > env vars > config file > defaults
+- Exit codes for error categorization
+- Output control (json, markdown, both)
 
-**Public interface:**
-- `discover(ParsedSite) -> SocialResult`
+### REST API (`api/`)
 
-**Data models:**
-- `SocialResult` — complete social discovery result
-- `SocialPageResult` — per-page discovered profiles
-- `SocialProfile` — discovered social profile
-- `SocialProfileProvenance` — provenance tracking
+FastAPI-based HTTP interface:
 
-**Responsibilities:**
-- Platform detection from link URLs
-- JSON-LD social link support
-- Open Graph reference support
-- Header/footer navigation link support
-- Relative URL normalization
-- Duplicate elimination
-- Provenance preservation
+- `GET /` — API documentation links
+- `GET /health` — Health check
+- `GET /version` — Version information
+- `POST /scan` — Scan a website
+- Automatic OpenAPI/Swagger at `/docs` and `/redoc`
 
-**Deferred by design:**
-- Competitor Discovery
-- Evidence Collector
-- Summary Builder
-- Exporters
-- CLI behavior
-- REST API behavior
+## Data Flow
 
-### Competitor Discovery (`src/extractors/competitors.py`)
+1. **Input**: `ScanRequest(target_url, competitor_urls, mode, options)`
+2. **Scan**: `ScannerService.scan()` → `RawSite`
+3. **Parse**: `parse(RawSite)` → `ParsedSite`
+4. **Extract**: Eight extractor modules → `SEO`, `Metadata`, `Technology`, `Content`, `Social`, `Competitors`, `Evidence`, `Schema`
+5. **Collect**: `collect()` → `EvidenceCollection` with deterministic IDs
+6. **Build**: `ScoutSchema` assembly and JSON Schema validation
+7. **Summarize**: `summarize()` → `Summary` with evidence-linked text
+8. **Export**: JSON string + Markdown string
 
-Assembles the competitor comparison set from explicit declarations and user-supplied lists.
+## Thread Safety
 
-**Public interface:**
-- `resolve(ParsedSite, user_supplied=[]) -> CompetitorResult`
+All modules are immutable and thread-safe. No module maintains mutable state between invocations.
 
-**Data models:**
-- `CompetitorResult` — complete competitor discovery result
-- `CompetitorPageResult` — per-page discovered competitors
-- `Competitor` — discovered competitor
-- `CompetitorProvenance` — provenance tracking
+## Determinism
 
-**Responsibilities:**
-- User-supplied competitor inclusion
-- Explicit competitor reference discovery from comparison/alternatives pages
-- Partner page link discovery
-- Duplicate elimination
-- Provenance preservation
-- Rule-based confidence assignment
+- Evidence IDs are deterministic for identical input
+- Sorting is applied where ordering matters
+- Timestamps are ISO-8601 UTC
+- Dynamic HTTP headers (e.g., `cf-ray`) are expected to vary between runs
 
-**Deferred by design:**
-- Heuristic competitor discovery (EXEC-14)
-- Evidence Collector
-- Summary Builder
-- Exporters
-- CLI behavior
-- REST API behavior
+## See Also
 
-### SEO Extractor (`src/extractors/seo.py`)
-
-Derives on-page SEO signals from `ParsedSite`.
-
-**Public interface:**
-- `analyze(ParsedSite) -> SEOResult`
-- `to_simple_seo(SEOResult) -> SEO`
-
-**Data models:**
-- `SEOResult` — complete SEO extraction result
-- `SEOPageResult` — per-page SEO signals
-- `Title`, `MetaDescription`, `CanonicalURL`, `RobotsMeta`
-- `HeadingHierarchy`, `Heading`
-- `OpenGraphSEO`, `TwitterCardSEO`
-- `StructuredDataPresence`, `Indexability`
-- `ElementProvenance` — provenance tracking
-
-**Responsibilities:**
-- Title extraction
-- Meta description extraction
-- Canonical URL extraction
-- Robots meta extraction
-- Hreflang extraction
-- Charset detection
-- Viewport detection
-- Language detection
-- Heading hierarchy analysis
-- Open Graph SEO tags
-- Twitter Card SEO tags
-- Structured data presence detection
-- Basic indexability flags
-
-**Deferred by design:**
-- SEO scoring
-- Recommendations
-- Ranking
-- Competitor Discovery
-- Evidence Collector
-- Summary Builder
-- Exporters
-- CLI behavior
-- REST API behavior
-
-### Content Extractor (`src/extractors/content.py`)
-
-Pulls structured content from the parsed body region.
-
-**Public interface:**
-- `extract(ParsedSite) -> ContentResult`
-
-**Data models:**
-- `ContentResult` — complete content extraction result
-- `ContentPageResult` — per-page extracted content
-- `ContentHeading` — extracted heading element
-- `ContentParagraph` — extracted paragraph element
-- `ContentList` — extracted list element
-- `ContentListItem` — extracted list item element
-- `ContentTable` — extracted table element
-- `ContentImage` — extracted image element
-- `ContentLink` — extracted link element
-- `ContentButton` — extracted button element
-- `ContentForm` — extracted form element
-- `ContentBreadcrumb` — extracted breadcrumb element
-- `ContentFooter` — extracted footer content
-- `ContentElementProvenance` — provenance tracking
-
-**Responsibilities:**
-- Heading extraction (H1–H6)
-- Paragraph extraction
-- List extraction (ordered and unordered)
-- Table extraction
-- Image extraction with alt text
-- Link extraction with text and destinations
-- Button extraction
-- Form extraction
-- Breadcrumb extraction
-- Footer content extraction
-- Provenance preservation
-
-**Deferred by design:**
-- Social Discovery
-- Competitor Discovery
-- Evidence Collector
-- Summary Builder
-- Exporters
-- CLI behavior
-- REST API behavior
-
-### Technology Detector (`src/extractors/technology.py`)
-
-Identifies the target's technology stack from deterministic evidence.
-
-**Public interface:**
-- `detect(RawSite, ParsedSite) -> TechnologyResult`
-
-**Data models:**
-- `TechnologyResult` — complete technology detection result
-- `TechnologyPageResult` — per-page detected technologies
-- `Technology` — detected technology with provenance
-- `TechnologyEvidence` — evidence for a detection
-
-**Responsibilities:**
-- Framework detection (React, Next.js, Vue, Nuxt, Angular, Svelte)
-- CMS detection (WordPress, Drupal, Joomla, Ghost, Shopify, Wix, Squarespace)
-- Web server detection (nginx, Apache, IIS)
-- Analytics detection (Google Analytics, Google Tag Manager, Plausible, Matomo)
-- CSS framework detection (Bootstrap, Tailwind CSS)
-- Version extraction where explicitly available
-- Rule-based confidence assignment
-- Provenance preservation
-
-**Deferred by design:**
-- Content Extractor
-- Competitor Discovery
-- Evidence Collector
-- Summary Builder
-- Exporters
-- CLI behavior
-- REST API behavior
-
-### Metadata Extractor (`src/extractors/metadata.py`)
-
-Pulls structured metadata from the parsed head region.
-
-**Public interface:**
-- `extract(ParsedSite) -> MetadataResult`
-
-**Data models:**
-- `MetadataResult` — complete metadata extraction result
-- `MetadataPageResult` — per-page metadata
-- `MetaValue` — extracted metadata value with provenance
-- `MetaLink` — discovered link with rel/type
-- `VerificationTag` — site verification tag
-- `ElementProvenance` — provenance tracking
-
-**Responsibilities:**
-- Application name extraction
-- Generator extraction
-- Author extraction
-- Publisher extraction
-- Copyright extraction
-- Theme color extraction
-- Color scheme extraction
-- Favicon discovery
-- Apple touch icon discovery
-- Manifest extraction
-- RSS/Atom feed discovery
-- Alternate link discovery
-- Verification tag extraction (Google, Bing, Yandex, Facebook)
-- Web app capable flags
-
-**Deferred by design:**
-- Technology detection
-- Content extraction
-- Social discovery
-- Competitor discovery
-- Evidence collection
-- Summary Builder
-- Exporters
-- REST API behavior
-
-### Command Line Interface (`src/cli/__init__.py`)
-
-The CLI is the orchestration layer for Scout OSS. It executes the complete
-pipeline by calling existing modules in sequence.
-
-**Public interface:**
-- `main(argv: list[str] | None = None) -> int`
-
-**Responsibilities:**
-- Parse CLI arguments
-- Resolve configuration
-- Orchestrate the full pipeline
-- Handle exit codes
-- Export JSON and/or Markdown output
-
-**Deferred by design:**
-- REST API behavior
-
-### JSON Exporter (`src/exporters/json_exporter.py`)
-
-Serializes a `ScoutSchema` into a stable JSON document.
-
-**Public interface:**
-- `export(schema: ScoutSchema) -> str`
-- `export_to_file(schema, path) -> None`
-
-**Responsibilities:**
-- Faithful serialization of canonical schema
-- UTF-8 pretty-printed output
-- Stable key ordering
-- Schema compliance
-- Never mutates input schema
-
-**Deferred by design:**
-- CLI behavior
-- REST API behavior
-
-### Markdown Exporter (`src/exporters/markdown_exporter.py`)
-
-Renders a `ScoutSummary` into a deterministic Markdown document.
-
-**Public interface:**
-- `export(summary: Summary) -> str`
-- `export_to_file(summary, path) -> None`
-
-**Responsibilities:**
-- Exact rendering of summary text
-- UTF-8 output
-- Never mutates input summary
-- Never summarizes, infers, or classifies
-
-**Deferred by design:**
-- CLI behavior
-
-### REST API (`src/api/app.py`)
-
-HTTP interface for Scout OSS using FastAPI. Reuses the existing
-`RequestHandler.handle()` for pipeline orchestration.
-
-**Public interface:**
-- `GET /` - API documentation links
-- `GET /health` - Health check
-- `GET /version` - Version information
-- `POST /scan` - Scan a website
-
-**Responsibilities:**
-- HTTP request/response handling
-- Request validation
-- Error mapping to HTTP status codes
-- Automatic OpenAPI/Swagger documentation
-- Reuses RequestHandler without duplicating pipeline logic
-
-**Deferred by design:**
-- Authentication
-- Persistence
-- Rate limiting
+- [Schema](schema.md) — JSON Schema documentation
+- [API Guide](api-guide.md) — Request Handler and REST API reference
+- [CLI Guide](cli-guide.md) — Command-line usage
+- [Plugin Guide](plugin-guide.md) — Extension and plugin development

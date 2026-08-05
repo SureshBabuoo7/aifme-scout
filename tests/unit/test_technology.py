@@ -263,3 +263,145 @@ class TestDeterministic:
         result1 = _parse(html)
         result2 = _parse(html)
         assert _tech_names(_get_techs(result1)) == _tech_names(_get_techs(result2))
+
+
+class TestXPtoweredBy:
+    def test_aspnet_detected(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"X-Powered-By": "ASP.NET"})
+        assert "ASP.NET" in _tech_names(_get_techs(result))
+
+    def test_php_detected(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"X-Powered-By": "PHP/8.1"})
+        assert "PHP" in _tech_names(_get_techs(result))
+
+    def test_express_detected(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"X-Powered-By": "Express"})
+        assert "Express.js" in _tech_names(_get_techs(result))
+
+
+class TestCDNHeaders:
+    def test_cloudflare_cf_ray(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"CF-RAY": "abc123"})
+        assert "Cloudflare" in _tech_names(_get_techs(result))
+
+    def test_cdn_via_header(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"Via": "1.1 varnish"})
+        assert "CDN/Proxy" in _tech_names(_get_techs(result))
+
+    def test_fastly_detected(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"X-Fastly": "123"})
+        assert "Fastly" in _tech_names(_get_techs(result))
+
+    def test_aws_cloudfront_detected(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"X-Amz-Cf-Id": "abc123"})
+        assert "AWS CloudFront" in _tech_names(_get_techs(result))
+
+
+class TestSecurityHeaders:
+    def test_csp_detected(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"Content-Security-Policy": "default-src 'self'"})
+        assert "Content-Security-Policy" in _tech_names(_get_techs(result))
+
+    def test_hsts_detected(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"Strict-Transport-Security": "max-age=31536000"})
+        assert "HSTS" in _tech_names(_get_techs(result))
+
+    def test_x_frame_options_detected(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"X-Frame-Options": "DENY"})
+        assert "X-Frame-Options" in _tech_names(_get_techs(result))
+
+    def test_x_content_type_options_detected(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"X-Content-Type-Options": "nosniff"})
+        assert "X-Content-Type-Options" in _tech_names(_get_techs(result))
+
+    def test_referrer_policy_detected(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"Referrer-Policy": "strict-origin-when-cross-origin"})
+        assert "Referrer-Policy" in _tech_names(_get_techs(result))
+
+    def test_permissions_policy_detected(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html, headers={"Permissions-Policy": "geolocation=()"})
+        assert "Permissions-Policy" in _tech_names(_get_techs(result))
+
+
+class TestNewJSLibraries:
+    def test_jquery_ui_detected(self) -> None:
+        html = '<html><head><script src="/js/jquery-ui.min.js"></script></head><body></body></html>'
+        result = _parse(html)
+        assert "jQuery UI" in _tech_names(_get_techs(result))
+
+    def test_lodash_detected(self) -> None:
+        html = '<html><head><script src="/js/lodash.min.js"></script></head><body></body></html>'
+        result = _parse(html)
+        assert "Lodash" in _tech_names(_get_techs(result))
+
+    def test_moment_detected(self) -> None:
+        html = '<html><head><script src="/js/moment.min.js"></script></head><body></body></html>'
+        result = _parse(html)
+        assert "Moment.js" in _tech_names(_get_techs(result))
+
+    def test_axios_detected(self) -> None:
+        html = '<html><head><script src="/js/axios.min.js"></script></head><body></body></html>'
+        result = _parse(html)
+        assert "Axios" in _tech_names(_get_techs(result))
+
+    def test_gsap_detected(self) -> None:
+        html = '<html><head><script src="/js/gsap.min.js"></script></head><body></body></html>'
+        result = _parse(html)
+        assert "GSAP" in _tech_names(_get_techs(result))
+
+    def test_font_awesome_detected(self) -> None:
+        html = '<html><head><script src="/js/fontawesome.js"></script></head><body></body></html>'
+        result = _parse(html)
+        assert "Font Awesome" in _tech_names(_get_techs(result))
+
+    def test_hotjar_detected(self) -> None:
+        html = '<html><head><script src="/js/hotjar.js"></script></head><body></body></html>'
+        result = _parse(html)
+        assert "Hotjar" in _tech_names(_get_techs(result))
+
+    def test_stripe_detected(self) -> None:
+        html = '<html><head><script src="https://js.stripe.com/v3/"></script></head><body></body></html>'
+        result = _parse(html)
+        assert "Stripe" in _tech_names(_get_techs(result))
+
+    def test_swiper_detected(self) -> None:
+        html = '<html><head><script src="/js/swiper.min.js"></script></head><body></body></html>'
+        result = _parse(html)
+        assert "Swiper" in _tech_names(_get_techs(result))
+
+
+class TestHTMLCommentFingerprints:
+    def test_wordpress_comment_detected(self) -> None:
+        html = '<html><body><!-- WordPress 6.4 --><p>Content</p></body></html>'
+        result = _parse(html)
+        assert "WordPress" in _tech_names(_get_techs(result))
+
+    def test_drupal_comment_detected(self) -> None:
+        html = '<html><body><!-- Drupal 10 --><p>Content</p></body></html>'
+        result = _parse(html)
+        assert "Drupal" in _tech_names(_get_techs(result))
+
+
+class TestJSGlobals:
+    def test_nextjs_global_detected(self) -> None:
+        html = '<html><head></head><body><script>window.__NEXT_DATA__ = {};</script></body></html>'
+        result = _parse(html)
+        assert "Next.js" in _tech_names(_get_techs(result))
+
+    def test_nuxt_global_detected(self) -> None:
+        html = '<html><head></head><body><script>window.__NUXT__ = {};</script></body></html>'
+        result = _parse(html)
+        assert "Nuxt" in _tech_names(_get_techs(result))

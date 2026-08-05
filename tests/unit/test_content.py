@@ -255,3 +255,132 @@ class TestEmptyPage:
         assert page.forms == []
         assert page.breadcrumbs == []
         assert page.footer is None
+
+
+class TestContactExtraction:
+    def test_contact_emails_extracted(self) -> None:
+        html = _load_fixture("contact-media.html")
+        result = _parse(html)
+        assert "contact@example.com" in result.pages[0].contact_emails
+
+    def test_no_contact_emails(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html)
+        assert result.pages[0].contact_emails == []
+
+    def test_contact_phones_extracted(self) -> None:
+        html = _load_fixture("contact-media.html")
+        result = _parse(html)
+        assert "+1234567890" in result.pages[0].contact_phones
+
+    def test_no_contact_phones(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html)
+        assert result.pages[0].contact_phones == []
+
+
+class TestVideoExtraction:
+    def test_video_src_extracted(self) -> None:
+        html = _load_fixture("contact-media.html")
+        result = _parse(html)
+        videos = result.pages[0].videos
+        assert any(v.get("src") == "/videos/intro.mp4" for v in videos)
+
+    def test_youtube_iframe_detected(self) -> None:
+        html = _load_fixture("contact-media.html")
+        result = _parse(html)
+        videos = result.pages[0].videos
+        assert any(v.get("platform") == "youtube" for v in videos)
+
+    def test_no_videos(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html)
+        assert result.pages[0].videos == []
+
+
+class TestAudioExtraction:
+    def test_audio_src_extracted(self) -> None:
+        html = _load_fixture("contact-media.html")
+        result = _parse(html)
+        assert "/audio/podcast.mp3" in result.pages[0].audios
+
+    def test_no_audio(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html)
+        assert result.pages[0].audios == []
+
+
+class TestBlockquoteExtraction:
+    def test_blockquote_extracted(self) -> None:
+        html = _load_fixture("contact-media.html")
+        result = _parse(html)
+        bq = result.pages[0].blockquotes
+        assert len(bq) == 1
+        assert "important quote" in bq[0]
+
+    def test_no_blockquote(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html)
+        assert result.pages[0].blockquotes == []
+
+
+class TestCodeExtraction:
+    def test_pre_code_extracted(self) -> None:
+        html = _load_fixture("contact-media.html")
+        result = _parse(html)
+        blocks = result.pages[0].code_blocks
+        assert any(b["tag"] == "pre" for b in blocks)
+        assert any("hello" in b["text"].lower() for b in blocks)
+
+    def test_inline_code_extracted(self) -> None:
+        html = _load_fixture("contact-media.html")
+        result = _parse(html)
+        blocks = result.pages[0].code_blocks
+        assert any(b["tag"] == "code" for b in blocks)
+
+    def test_no_code(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html)
+        assert result.pages[0].code_blocks == []
+
+
+class TestDefinitionListExtraction:
+    def test_definition_list_extracted(self) -> None:
+        html = _load_fixture("contact-media.html")
+        result = _parse(html)
+        dls = result.pages[0].definition_lists
+        assert len(dls) == 1
+        assert "HTML" in dls[0]["terms"]
+        assert "HyperText Markup Language" in dls[0]["descriptions"]
+
+    def test_no_definition_list(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html)
+        assert result.pages[0].definition_lists == []
+
+
+class TestAddressExtraction:
+    def test_address_extracted(self) -> None:
+        html = _load_fixture("contact-media.html")
+        result = _parse(html)
+        assert result.pages[0].address is not None
+        assert "Main Street" in result.pages[0].address
+
+    def test_no_address(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html)
+        assert result.pages[0].address is None
+
+
+class TestFigureCaptionExtraction:
+    def test_figure_caption_extracted(self) -> None:
+        html = _load_fixture("contact-media.html")
+        result = _parse(html)
+        captions = result.pages[0].figure_captions
+        assert len(captions) == 1
+        assert "Revenue Growth" in captions[0].get("caption", "")
+
+    def test_no_figure_caption(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html)
+        assert result.pages[0].figure_captions == []

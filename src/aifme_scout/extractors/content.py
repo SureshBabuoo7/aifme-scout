@@ -293,6 +293,155 @@ def _extract_footer(body: Element | None, page_url: str) -> ContentFooter | None
     return None
 
 
+def _extract_contact_emails(body: Element | None, page_url: str) -> list[str]:
+    """Extract email addresses from mailto: links."""
+    if body is None:
+        return []
+    emails: list[str] = []
+    for a in body.find_all("a"):
+        href = a.get("href", "")
+        if href.lower().startswith("mailto:"):
+            email = href[7:].split("?")[0].strip()
+            if email and email not in emails:
+                emails.append(email)
+    return emails
+
+
+def _extract_contact_phones(body: Element | None, page_url: str) -> list[str]:
+    """Extract phone numbers from tel: links."""
+    if body is None:
+        return []
+    phones: list[str] = []
+    for a in body.find_all("a"):
+        href = a.get("href", "")
+        if href.lower().startswith("tel:"):
+            phone = href[4:].strip()
+            if phone and phone not in phones:
+                phones.append(phone)
+    return phones
+
+
+def _extract_videos(body: Element | None, page_url: str) -> list[dict]:
+    """Extract video and iframe (YouTube/Vimeo) sources."""
+    if body is None:
+        return []
+    videos: list[dict] = []
+    seen: set[str] = set()
+    for video in body.find_all("video"):
+        src = video.get("src", "")
+        if src and src not in seen:
+            seen.add(src)
+            videos.append({"type": "video", "src": src})
+    for iframe in body.find_all("iframe"):
+        src = iframe.get("src", "")
+        if not src:
+            continue
+        src_lower = src.lower()
+        if "youtube" in src_lower or "youtu.be" in src_lower or "vimeo" in src_lower:
+            if src not in seen:
+                seen.add(src)
+                platform = "youtube" if "youtube" in src_lower or "youtu.be" in src_lower else "vimeo"
+                videos.append({"type": "iframe", "platform": platform, "src": src})
+    return videos
+
+
+def _extract_audio(body: Element | None, page_url: str) -> list[str]:
+    """Extract audio sources."""
+    if body is None:
+        return []
+    sources: list[str] = []
+    seen: set[str] = set()
+    for audio in body.find_all("audio"):
+        src = audio.get("src", "")
+        if src and src not in seen:
+            seen.add(src)
+            sources.append(src)
+        for source in audio.find_all("source"):
+            src = source.get("src", "")
+            if src and src not in seen:
+                seen.add(src)
+                sources.append(src)
+    return sources
+
+
+def _extract_blockquotes(body: Element | None, page_url: str) -> list[str]:
+    """Extract blockquote text content."""
+    if body is None:
+        return []
+    quotes: list[str] = []
+    for bq in body.find_all("blockquote"):
+        text = _text_content(bq)
+        if text:
+            quotes.append(text)
+    return quotes
+
+
+def _extract_code_blocks(body: Element | None, page_url: str) -> list[dict]:
+    """Extract code block content from <pre> and <code> tags."""
+    if body is None:
+        return []
+    blocks: list[dict] = []
+    seen_texts: set[str] = set()
+    for pre in body.find_all("pre"):
+        code = pre.find("code")
+        text = _text_content(code) if code is not None else _text_content(pre)
+        if text and text not in seen_texts:
+            seen_texts.add(text)
+            blocks.append({"tag": "pre", "text": text})
+    for code in body.find_all("code"):
+        if code.parent and code.parent.tag == "pre":
+            continue
+        text = _text_content(code)
+        if text and text not in seen_texts:
+            seen_texts.add(text)
+            blocks.append({"tag": "code", "text": text})
+    return blocks
+
+
+def _extract_definition_lists(body: Element | None, page_url: str) -> list[dict]:
+    """Extract definition list terms and descriptions."""
+    if body is None:
+        return []
+    dl_items: list[dict] = []
+    for dl in body.find_all("dl"):
+        dts = dl.find_all("dt")
+        dds = dl.find_all("dd")
+        terms = [_text_content(dt) for dt in dts if _text_content(dt)]
+        descriptions = [_text_content(dd) for dd in dds if _text_content(dd)]
+        if terms or descriptions:
+            dl_items.append({"terms": terms, "descriptions": descriptions})
+    return dl_items
+
+
+def _extract_address(body: Element | None, page_url: str) -> str | None:
+    """Extract contact address from <address> tag."""
+    if body is None:
+        return None
+    address = body.find("address")
+    if address is None:
+        return None
+    text = _text_content(address)
+    return text if text else None
+
+
+def _extract_figure_captions(body: Element | None, page_url: str) -> list[dict]:
+    """Extract figure captions."""
+    if body is None:
+        return []
+    captions: list[dict] = []
+    for figure in body.find_all("figure"):
+        figcaption = figure.find("figcaption")
+        caption_text = _text_content(figcaption) if figcaption is not None else None
+        img = figure.find("img")
+        img_src = img.get("src", "") if img is not None else ""
+        captions.append(
+            {"image_src": img_src, "caption": caption_text}
+            if caption_text
+            else {"image_src": img_src}
+        )
+    return captions
+
+
 def extract(parsed_site: ParsedSite) -> ContentResult:
     """Extract structured content from a ParsedSite.
 
@@ -318,6 +467,15 @@ def extract(parsed_site: ParsedSite) -> ContentResult:
         forms = _extract_forms(body, page_url)
         breadcrumbs = _extract_breadcrumbs(body, page_url)
         footer = _extract_footer(body, page_url)
+        contact_emails = _extract_contact_emails(body, page_url)
+        contact_phones = _extract_contact_phones(body, page_url)
+        videos = _extract_videos(body, page_url)
+        audios = _extract_audio(body, page_url)
+        blockquotes = _extract_blockquotes(body, page_url)
+        code_blocks = _extract_code_blocks(body, page_url)
+        definition_lists = _extract_definition_lists(body, page_url)
+        address = _extract_address(body, page_url)
+        figure_captions = _extract_figure_captions(body, page_url)
 
         pages.append(
             ContentPageResult(
@@ -332,6 +490,15 @@ def extract(parsed_site: ParsedSite) -> ContentResult:
                 forms=forms,
                 breadcrumbs=breadcrumbs,
                 footer=footer,
+                contact_emails=contact_emails,
+                contact_phones=contact_phones,
+                videos=videos,
+                audios=audios,
+                blockquotes=blockquotes,
+                code_blocks=code_blocks,
+                definition_lists=definition_lists,
+                address=address,
+                figure_captions=figure_captions,
             )
         )
 

@@ -365,6 +365,19 @@ def _check_script_urls(page: ParsedPage) -> list[Technology]:
             )
             continue
 
+        # jQuery UI (must come before jQuery)
+        if "jquery-ui" in src_lower or "jqueryui" in src_lower:
+            technologies.append(
+                Technology(
+                    name="jQuery UI",
+                    category="JavaScript Library",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_jquery_ui", src, "script")],
+                )
+            )
+            continue
+
         # jQuery
         if "jquery" in src_lower and src_lower.endswith(".js"):
             technologies.append(
@@ -378,67 +391,223 @@ def _check_script_urls(page: ParsedPage) -> list[Technology]:
             )
             continue
 
-        # Adobe Helix
-        if "helix" in src_lower:
+        # jQuery Migrate
+        if "jquery-migrate" in src_lower:
             technologies.append(
                 Technology(
-                    name="Adobe Helix",
-                    category="CMS",
+                    name="jQuery Migrate",
+                    category="JavaScript Library",
                     confidence="high",
                     detection_method="script_url",
-                    evidence=[_evidence(page.url, "script_url_adobe_helix", src, "script")],
+                    evidence=[_evidence(page.url, "script_url_jquery_migrate", src, "script")],
                 )
             )
             continue
 
-        # Zoho
-        if "zoho" in src_lower:
+        # Lodash
+        if "lodash" in src_lower:
             technologies.append(
                 Technology(
-                    name="Zoho",
-                    category="SaaS",
+                    name="Lodash",
+                    category="JavaScript Library",
                     confidence="high",
                     detection_method="script_url",
-                    evidence=[_evidence(page.url, "script_url_zoho", src, "script")],
+                    evidence=[_evidence(page.url, "script_url_lodash", src, "script")],
                 )
             )
             continue
 
-        # Astro
-        if "/_astro/" in src_lower:
+        # Moment.js
+        if "moment" in src_lower:
             technologies.append(
                 Technology(
-                    name="Astro",
-                    category="Framework",
-                    confidence="high",
+                    name="Moment.js",
+                    category="JavaScript Library",
+                    confidence="medium",
                     detection_method="script_url",
-                    evidence=[_evidence(page.url, "script_url_astro", src, "script")],
+                    evidence=[_evidence(page.url, "script_url_moment", src, "script")],
                 )
             )
             continue
 
-        # Cloudflare Insights
-        if "cloudflareinsights.com" in src_lower:
+        # Axios
+        if "axios" in src_lower:
             technologies.append(
                 Technology(
-                    name="Cloudflare Insights",
+                    name="Axios",
+                    category="JavaScript Library",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_axios", src, "script")],
+                )
+            )
+            continue
+
+        # GSAP
+        if "gsap" in src_lower or "greensock" in src_lower:
+            technologies.append(
+                Technology(
+                    name="GSAP",
+                    category="JavaScript Library",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_gsap", src, "script")],
+                )
+            )
+            continue
+
+        # Three.js
+        if "three" in src_lower and (".js" in src_lower or "three." in src_lower):
+            technologies.append(
+                Technology(
+                    name="Three.js",
+                    category="JavaScript Library",
+                    confidence="medium",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_threejs", src, "script")],
+                )
+            )
+            continue
+
+        # D3.js
+        if "d3" in src_lower and (".js" in src_lower or "d3." in src_lower):
+            technologies.append(
+                Technology(
+                    name="D3.js",
+                    category="JavaScript Library",
+                    confidence="medium",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_d3", src, "script")],
+                )
+            )
+            continue
+
+        # Chart.js
+        if "chart" in src_lower and ".js" in src_lower:
+            technologies.append(
+                Technology(
+                    name="Chart.js",
+                    category="JavaScript Library",
+                    confidence="medium",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_chartjs", src, "script")],
+                )
+            )
+            continue
+
+        # Lazy.js / lazyload
+        if "lazyload" in src_lower or "lazy-load" in src_lower:
+            technologies.append(
+                Technology(
+                    name="LazyLoad",
+                    category="JavaScript Library",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_lazyload", src, "script")],
+                )
+            )
+            continue
+
+        # Swiper
+        if "swiper" in src_lower:
+            technologies.append(
+                Technology(
+                    name="Swiper",
+                    category="JavaScript Library",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_swiper", src, "script")],
+                )
+            )
+            continue
+
+        # Font Awesome
+        if "fontawesome" in src_lower or "font-awesome" in src_lower:
+            technologies.append(
+                Technology(
+                    name="Font Awesome",
+                    category="Icon Library",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_font_awesome", src, "script")],
+                )
+            )
+            continue
+
+        # Hotjar
+        if "hotjar" in src_lower:
+            technologies.append(
+                Technology(
+                    name="Hotjar",
                     category="Analytics",
                     confidence="high",
                     detection_method="script_url",
-                    evidence=[_evidence(page.url, "script_url_cloudflare_insights", src, "script")],
+                    evidence=[_evidence(page.url, "script_url_hotjar", src, "script")],
                 )
             )
             continue
 
-        # OneTrust
-        if "otSDKStub" in src_lower or "optanon" in src_lower:
+        # Segment
+        if "segment" in src_lower and ".js" in src_lower:
             technologies.append(
                 Technology(
-                    name="OneTrust",
-                    category="Compliance",
+                    name="Segment",
+                    category="Analytics",
                     confidence="high",
                     detection_method="script_url",
-                    evidence=[_evidence(page.url, "script_url_onetrust", src, "script")],
+                    evidence=[_evidence(page.url, "script_url_segment", src, "script")],
+                )
+            )
+            continue
+
+        # Intercom
+        if "intercom" in src_lower:
+            technologies.append(
+                Technology(
+                    name="Intercom",
+                    category="Customer Support",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_intercom", src, "script")],
+                )
+            )
+            continue
+
+        # Stripe
+        if "stripe" in src_lower:
+            technologies.append(
+                Technology(
+                    name="Stripe",
+                    category="Payment",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_stripe", src, "script")],
+                )
+            )
+            continue
+
+        # HubSpot
+        if "hubspot" in src_lower:
+            technologies.append(
+                Technology(
+                    name="HubSpot",
+                    category="CRM",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_hubspot", src, "script")],
+                )
+            )
+            continue
+
+        # Mailchimp
+        if "mailchimp" in src_lower:
+            technologies.append(
+                Technology(
+                    name="Mailchimp",
+                    category="Email Marketing",
+                    confidence="high",
+                    detection_method="script_url",
+                    evidence=[_evidence(page.url, "script_url_mailchimp", src, "script")],
                 )
             )
             continue
@@ -496,80 +665,152 @@ def _check_link_urls(page: ParsedPage) -> list[Technology]:
 def _check_http_headers(page: ParsedPage, raw_page: RawPage) -> list[Technology]:
     """Check HTTP headers for technology fingerprints."""
     technologies: list[Technology] = []
-    server = next(
-        (v for k, v in raw_page.headers.items() if k.lower() == "server"),
-        "",
-    )
-    if not server:
-        return technologies
+    headers_lower = {k.lower(): v for k, v in raw_page.headers.items()}
 
-    server_lower = server.lower()
+    server = headers_lower.get("server", "")
+    if server:
+        server_lower = server.lower()
 
-    if server_lower == "github.com":
-        technologies.append(
-            Technology(
-                name="GitHub",
-                category="Infrastructure",
-                confidence="high",
-                detection_method="http_header",
-                evidence=[_evidence(page.url, "header_server_github", server, "header")],
+        if server_lower == "github.com":
+            technologies.append(
+                Technology(
+                    name="GitHub",
+                    category="Infrastructure",
+                    confidence="high",
+                    detection_method="http_header",
+                    evidence=[_evidence(page.url, "header_server_github", server, "header")],
+                )
             )
-        )
 
-    if "nginx" in server_lower:
-        technologies.append(
-            Technology(
-                name="nginx",
-                category="Web Server",
-                confidence="high",
-                detection_method="http_header",
-                evidence=[_evidence(page.url, "header_server_nginx", server, "header")],
+        if "nginx" in server_lower:
+            technologies.append(
+                Technology(
+                    name="nginx",
+                    category="Web Server",
+                    confidence="high",
+                    detection_method="http_header",
+                    evidence=[_evidence(page.url, "header_server_nginx", server, "header")],
+                )
             )
-        )
 
-    if "apache" in server_lower:
-        technologies.append(
-            Technology(
-                name="Apache",
-                category="Web Server",
-                confidence="high",
-                detection_method="http_header",
-                evidence=[_evidence(page.url, "header_server_apache", server, "header")],
+        if "apache" in server_lower:
+            technologies.append(
+                Technology(
+                    name="Apache",
+                    category="Web Server",
+                    confidence="high",
+                    detection_method="http_header",
+                    evidence=[_evidence(page.url, "header_server_apache", server, "header")],
+                )
             )
-        )
 
-    if "microsoft-iis" in server_lower or server_lower == "iis":
-        technologies.append(
-            Technology(
-                name="IIS",
-                category="Web Server",
-                confidence="high",
-                detection_method="http_header",
-                evidence=[_evidence(page.url, "header_server_iis", server, "header")],
+        if "microsoft-iis" in server_lower or server_lower == "iis":
+            technologies.append(
+                Technology(
+                    name="IIS",
+                    category="Web Server",
+                    confidence="high",
+                    detection_method="http_header",
+                    evidence=[_evidence(page.url, "header_server_iis", server, "header")],
+                )
             )
-        )
 
-    if server_lower == "zgs":
-        technologies.append(
-            Technology(
-                name="Zoho",
-                category="SaaS",
-                confidence="high",
-                detection_method="http_header",
-                evidence=[_evidence(page.url, "header_server_zoho", server, "header")],
+        if server_lower == "zgs":
+            technologies.append(
+                Technology(
+                    name="Zoho",
+                    category="SaaS",
+                    confidence="high",
+                    detection_method="http_header",
+                    evidence=[_evidence(page.url, "header_server_zoho", server, "header")],
+                )
             )
-        )
 
-    if server_lower == "cloudflare":
-        technologies.append(
-            Technology(
-                name="Cloudflare",
-                category="Infrastructure",
-                confidence="high",
-                detection_method="http_header",
-                evidence=[_evidence(page.url, "header_server_cloudflare", server, "header")],
+        if server_lower == "cloudflare":
+            technologies.append(
+                Technology(
+                    name="Cloudflare",
+                    category="Infrastructure",
+                    confidence="high",
+                    detection_method="http_header",
+                    evidence=[_evidence(page.url, "header_server_cloudflare", server, "header")],
+                )
             )
-        )
+
+    x_powered_by = headers_lower.get("x-powered-by", "")
+    if x_powered_by:
+        xpb_lower = x_powered_by.lower()
+        if "asp.net" in xpb_lower:
+            technologies.append(
+                Technology(
+                    name="ASP.NET",
+                    category="Framework",
+                    confidence="high",
+                    detection_method="http_header",
+                    evidence=[_evidence(page.url, "header_x_powered_by_aspnet", x_powered_by, "header")],
+                )
+            )
+        if "php" in xpb_lower:
+            technologies.append(
+                Technology(
+                    name="PHP",
+                    category="Language",
+                    confidence="high",
+                    detection_method="http_header",
+                    evidence=[_evidence(page.url, "header_x_powered_by_php", x_powered_by, "header")],
+                )
+            )
+        if "express" in xpb_lower:
+            technologies.append(
+                Technology(
+                    name="Express.js",
+                    category="Framework",
+                    confidence="high",
+                    detection_method="http_header",
+                    evidence=[_evidence(page.url, "header_x_powered_by_express", x_powered_by, "header")],
+                )
+            )
+
+    cdn_headers = {
+        "cf-ray": "Cloudflare",
+        "cf-cache-status": "Cloudflare",
+        "x-cdn": "CDN",
+        "via": "CDN/Proxy",
+        "x-cache": "CDN/Proxy",
+        "x-fastly": "Fastly",
+        "x-amz-cf-id": "AWS CloudFront",
+    }
+    for header, name in cdn_headers.items():
+        if header in headers_lower:
+            technologies.append(
+                Technology(
+                    name=name,
+                    category="Infrastructure",
+                    confidence="high",
+                    detection_method="http_header",
+                    evidence=[_evidence(page.url, f"header_{header}", headers_lower[header], "header")],
+                )
+            )
+
+    security_headers = {
+        "content-security-policy": "Content-Security-Policy",
+        "strict-transport-security": "HSTS",
+        "x-frame-options": "X-Frame-Options",
+        "x-content-type-options": "X-Content-Type-Options",
+        "referrer-policy": "Referrer-Policy",
+        "permissions-policy": "Permissions-Policy",
+    }
+    for header, name in security_headers.items():
+        if header in headers_lower:
+            technologies.append(
+                Technology(
+                    name=name,
+                    category="Security",
+                    confidence="high",
+                    detection_method="http_header",
+                    evidence=[_evidence(page.url, f"header_{header}", headers_lower[header], "header")],
+                )
+            )
 
     return technologies
 
@@ -657,6 +898,66 @@ def _check_turbo(page: ParsedPage) -> list[Technology]:
     return technologies
 
 
+def _check_html_comments(page: ParsedPage) -> list[Technology]:
+    """Check HTML comments for CMS fingerprints."""
+    technologies: list[Technology] = []
+    raw_html = page.raw_html or ""
+
+    comment_patterns = [
+        ("WordPress", re.compile(r"wordpress", re.IGNORECASE)),
+        ("Drupal", re.compile(r"drupal", re.IGNORECASE)),
+        ("Joomla", re.compile(r"joomla", re.IGNORECASE)),
+    ]
+
+    for match in re.finditer(r"<!--(.*?)-->", raw_html, re.DOTALL):
+        comment_text = match.group(1).strip()
+        for name, pattern in comment_patterns:
+            if pattern.search(comment_text):
+                technologies.append(
+                    Technology(
+                        name=name,
+                        category="CMS",
+                        confidence="medium",
+                        detection_method="html_comment",
+                        evidence=[_evidence(page.url, f"html_comment_{name.lower()}", comment_text[:200], "comment")],
+                    )
+                )
+                break
+
+    return technologies
+
+
+def _check_js_globals(page: ParsedPage) -> list[Technology]:
+    """Check for JS global variable fingerprints in inline scripts."""
+    technologies: list[Technology] = []
+    root = page.root
+    if root is None:
+        return technologies
+
+    global_patterns = [
+        ("Next.js", re.compile(r"window\.__NEXT_DATA__", re.IGNORECASE)),
+        ("Nuxt", re.compile(r"window\.__NUXT__", re.IGNORECASE)),
+        ("WordPress", re.compile(r"var\s+wp(?:\s|\.)", re.IGNORECASE)),
+        ("Angular", re.compile(r"window\.ng", re.IGNORECASE)),
+    ]
+
+    for script in root.find_all("script"):
+        script_text = script.text or ""
+        for name, pattern in global_patterns:
+            if pattern.search(script_text):
+                technologies.append(
+                    Technology(
+                        name=name,
+                        category="Framework",
+                        confidence="medium",
+                        detection_method="js_global",
+                        evidence=[_evidence(page.url, f"js_global_{name.lower().replace('.', '').replace(' ', '_')}", name, "script")],
+                    )
+                )
+
+    return technologies
+
+
 def detect(raw_site: RawSite, parsed_site: ParsedSite) -> TechnologyResult:
     """Detect technologies from a RawSite and ParsedSite.
 
@@ -685,6 +986,8 @@ def detect(raw_site: RawSite, parsed_site: ParsedSite) -> TechnologyResult:
             technologies.extend(_check_http_headers(parsed_page, raw_page))
         technologies.extend(_check_dom_signatures(parsed_page))
         technologies.extend(_check_turbo(parsed_page))
+        technologies.extend(_check_html_comments(parsed_page))
+        technologies.extend(_check_js_globals(parsed_page))
 
         deduplicated = _deduplicate(technologies)
         pages.append(TechnologyPageResult(url=parsed_page.url, technologies=deduplicated))

@@ -350,3 +350,56 @@ class TestMissingMetadata:
         assert page.verification_tags == []
         assert page.web_app_capable is False
         assert page.mobile_web_app_capable is False
+
+
+class TestResourceHints:
+    def test_dns_prefetch_detected(self) -> None:
+        html = '<html><head><link rel="dns-prefetch" href="//cdn.example.com"></head><body></body></html>'
+        result = _parse(html)
+        assert len(result.pages[0].resource_hints) == 1
+        assert result.pages[0].resource_hints[0].url == "//cdn.example.com"
+
+    def test_preconnect_detected(self) -> None:
+        html = '<html><head><link rel="preconnect" href="https://fonts.example.com"></head><body></body></html>'
+        result = _parse(html)
+        assert len(result.pages[0].resource_hints) == 1
+
+    def test_prefetch_detected(self) -> None:
+        html = '<html><head><link rel="prefetch" href="/next-page.html"></head><body></body></html>'
+        result = _parse(html)
+        assert len(result.pages[0].resource_hints) == 1
+
+    def test_preload_detected(self) -> None:
+        html = '<html><head><link rel="preload" href="/font.woff2" as="font"></head><body></body></html>'
+        result = _parse(html)
+        assert len(result.pages[0].resource_hints) == 1
+
+
+class TestCSP:
+    def test_csp_detected(self) -> None:
+        html = '<html><head><meta name="content-security-policy" content="default-src \'self\'"></head><body></body></html>'
+        result = _parse(html)
+        assert result.pages[0].csp is not None
+        assert "default-src" in result.pages[0].csp.value
+
+
+class TestMsApplication:
+    def test_msapplication_tile_image_detected(self) -> None:
+        html = '<html><head><meta name="msapplication-TileImage" content="/tile.png"></head><body></body></html>'
+        result = _parse(html)
+        assert result.pages[0].msapplication_tile_image is not None
+        assert result.pages[0].msapplication_tile_image.value == "/tile.png"
+
+    def test_msapplication_config_detected(self) -> None:
+        html = '<html><head><meta name="msapplication-config" content="/browserconfig.xml"></head><body></body></html>'
+        result = _parse(html)
+        assert result.pages[0].msapplication_config is not None
+        assert result.pages[0].msapplication_config.value == "/browserconfig.xml"
+
+
+class TestGeoMeta:
+    def test_geo_meta_detected(self) -> None:
+        html = '<html><head><meta name="geo.region" content="US-CA"><meta name="geo.placename" content="San Francisco"></head><body></body></html>'
+        result = _parse(html)
+        assert result.pages[0].geo_meta.get("geo.region") == "US-CA"
+        assert result.pages[0].geo_meta.get("geo.placename") == "San Francisco"

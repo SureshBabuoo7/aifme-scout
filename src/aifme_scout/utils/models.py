@@ -127,6 +127,7 @@ class Evidence:
 
     claim: str
     source_url: str
+    claim_type: str = ""
     confidence: str = "low"
     collected_at: str = field(
         default_factory=lambda: datetime.now(UTC).isoformat().replace("+00:00", "Z")
@@ -139,6 +140,10 @@ class Summary:
 
     text: str = ""
     evidence_refs: list[str] = field(default_factory=list)
+    scan_status: str = ""
+    confidence: str = ""
+    scan_coverage: float = 0.0
+    target_classification: str = ""
 
 
 @dataclass(frozen=True)

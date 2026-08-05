@@ -22,6 +22,11 @@ class RawPage:
     response_size_bytes: int = 0
     response_time_ms: float = 0.0
     fetched_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    content_encoding: str | None = None
+    is_anti_bot_challenge: bool = False
+    is_rate_limited: bool = False
+    is_xml: bool = False
+    xml_type: str | None = None
 
 
 @dataclass(frozen=False)
@@ -33,6 +38,7 @@ class RobotsPolicy:
     allowed_paths: list[str] = field(default_factory=list)
     disallowed_paths: list[str] = field(default_factory=list)
     raw_content: str | None = None
+    sitemap_urls: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -51,3 +57,4 @@ class RawSite:
     errors: list[ScanError] = field(default_factory=list)
     scan_started_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     scan_completed_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    sitemap_pages_found: int = 0

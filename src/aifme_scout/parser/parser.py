@@ -5,11 +5,15 @@ Converts raw HTML into a deterministic, navigable DOM tree.
 
 from __future__ import annotations
 
-from bs4 import BeautifulSoup
+import warnings
+
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 from bs4.element import Tag
 
 from aifme_scout.parser.models import Element, ParsedPage, ParsedSite, ParseError, ParseWarning
 from aifme_scout.scanner.models import RawSite
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 
 def _tag_to_element(tag: Tag, parent: Element | None = None) -> Element:

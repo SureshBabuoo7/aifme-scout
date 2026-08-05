@@ -27,6 +27,11 @@ _COMPETITOR_PAGE_KEYWORDS = re.compile(
     re.IGNORECASE,
 )
 
+_COMPETITOR_SCHEMA_RELATIONS = re.compile(
+    r"isrelatedto|competitor|competeswith|sameas",
+    re.IGNORECASE,
+)
+
 _COMPETITOR_DISCOVERY_DOMAINS: dict[str, list[str]] = {
     "e-commerce": [
         "amazon.com",
@@ -143,6 +148,45 @@ def _create_provenance(
     )
 
 
+def _has_schema_org_competitor(root: Element | None) -> bool:
+    """Check for schema.org competitor markup."""
+    import json
+    import re as _re
+
+    if root is None:
+        return False
+    for script in root.find_all("script", {"type": "application/ld+json"}):
+        raw = script.text or script.string or ""
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            json_text = _re.sub(r'/\*.*?\*/', '', raw, flags=_re.DOTALL)
+            json_text = _re.sub(r'//.*?$', '', json_text, flags=_re.MULTILINE)
+            data = json.loads(json_text)
+        except Exception:
+            continue
+
+        def check_node(node: object) -> bool:
+            if isinstance(node, dict):
+                if _COMPETITOR_SCHEMA_RELATIONS.search(str(node.get("@type", ""))):
+                    return True
+                if _COMPETITOR_SCHEMA_RELATIONS.search(str(node.get("type", ""))):
+                    return True
+                for value in node.values():
+                    if check_node(value):
+                        return True
+            elif isinstance(node, list):
+                for item in node:
+                    if check_node(item):
+                        return True
+            return False
+
+        if check_node(data):
+            return True
+    return False
+
+
 def _is_competitor_page(page_url: str, root: Element | None) -> bool:
     """Check if a page appears to be a competitor/comparison page."""
     if root is None:
@@ -158,7 +202,15 @@ def _is_competitor_page(page_url: str, root: Element | None) -> bool:
                 heading_texts.append(heading.text)
 
     combined_text = f"{title_text} {' '.join(heading_texts)}"
-    return bool(_COMPETITOR_PAGE_KEYWORDS.search(combined_text))
+    if _COMPETITOR_PAGE_KEYWORDS.search(combined_text):
+        return True
+
+    for heading in root.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
+        heading_text = heading.text or ""
+        if re.search(r'\bvs\.?\b', heading_text, re.IGNORECASE):
+            return True
+
+    return _has_schema_org_competitor(root)
 
 
 def _extract_external_links(root: Element | None, base_url: str) -> list[tuple[Element, str, str]]:

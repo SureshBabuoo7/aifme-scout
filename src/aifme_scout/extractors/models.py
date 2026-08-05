@@ -78,6 +78,9 @@ class OpenGraphSEO:
     title: str | None = None
     description: str | None = None
     url: str | None = None
+    image: str | None = None
+    type: str | None = None
+    site_name: str | None = None
     provenance: ElementProvenance | None = None
 
 
@@ -87,6 +90,9 @@ class TwitterCardSEO:
 
     title: str | None = None
     description: str | None = None
+    card: str | None = None
+    image: str | None = None
+    site: str | None = None
     provenance: ElementProvenance | None = None
 
 
@@ -128,6 +134,11 @@ class SEOPageResult:
     twitter_card: TwitterCardSEO = field(default_factory=TwitterCardSEO)
     structured_data: StructuredDataPresence = field(default_factory=StructuredDataPresence)
     indexability: Indexability = field(default_factory=Indexability)
+    pagination_rel: list[str] = field(default_factory=list)
+    has_amp: bool = False
+    amp_detection_method: str | None = None
+    schema_org_type: str | None = None
+    schema_org_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -187,6 +198,11 @@ class MetadataPageResult:
     verification_tags: list[VerificationTag] = field(default_factory=list)
     web_app_capable: bool = False
     mobile_web_app_capable: bool = False
+    csp: MetaValue | None = None
+    msapplication_tile_image: MetaValue | None = None
+    msapplication_config: MetaValue | None = None
+    geo_meta: dict[str, str] = field(default_factory=dict)
+    resource_hints: list[MetaLink] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -356,6 +372,15 @@ class ContentPageResult:
     forms: list[ContentForm] = field(default_factory=list)
     breadcrumbs: list[ContentBreadcrumb] = field(default_factory=list)
     footer: ContentFooter | None = None
+    contact_emails: list[str] = field(default_factory=list)
+    contact_phones: list[str] = field(default_factory=list)
+    videos: list[dict] = field(default_factory=list)
+    audios: list[str] = field(default_factory=list)
+    blockquotes: list[str] = field(default_factory=list)
+    code_blocks: list[dict] = field(default_factory=list)
+    definition_lists: list[dict] = field(default_factory=list)
+    address: str | None = None
+    figure_captions: list[dict] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

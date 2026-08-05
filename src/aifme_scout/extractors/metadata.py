@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from aifme_scout.extractors.models import (
+    ElementProvenance,
     MetadataPageResult,
     MetadataResult,
     MetaLink,
@@ -170,6 +171,11 @@ def extract(parsed_site: ParsedSite) -> MetadataResult:
         manifest = None
         web_app_capable = False
         mobile_web_app_capable = False
+        csp = None
+        msapplication_tile_image = None
+        msapplication_config = None
+        geo_meta: dict[str, str] = {}
+        resource_hints: list[MetaLink] = []
 
         if head is not None:
             for meta in head.find_all("meta"):
@@ -196,6 +202,14 @@ def extract(parsed_site: ParsedSite) -> MetadataResult:
                     mobile_web_app_capable = (content or "").lower() == "yes"
                 elif name == "apple-mobile-web-app-capable":
                     web_app_capable = (content or "").lower() == "yes"
+                elif name == "content-security-policy":
+                    csp = _meta_value(meta, "content")
+                elif name == "msapplication-TileImage":
+                    msapplication_tile_image = _meta_value(meta, "content")
+                elif name == "msapplication-config":
+                    msapplication_config = _meta_value(meta, "content")
+                elif name.lower().startswith("geo."):
+                    geo_meta[name] = content or ""
 
             og_site_name = head.find("meta", {"property": "og:site_name"})
             if og_site_name is not None and site_name is None:
@@ -203,6 +217,27 @@ def extract(parsed_site: ParsedSite) -> MetadataResult:
 
             manifest_link = head.find("link", {"rel": "manifest"})
             manifest = _meta_value(manifest_link, "href") if manifest_link is not None else None
+
+            for link in head.find_all("link"):
+                rel = link.get("rel", "")
+                if rel:
+                    rel_parts = rel.split() if isinstance(rel, str) else rel
+                    if any(r in rel_parts for r in ("dns-prefetch", "preconnect", "prefetch", "preload")):
+                        href = link.get("href", "")
+                        if href:
+                            resource_hints.append(
+                                MetaLink(
+                                    url=href,
+                                    rel=rel,
+                                    type_=link.get("type"),
+                                    provenance=ElementProvenance(
+                                        page_url=parsed_page.url,
+                                        tag=link.tag,
+                                        attribute="href",
+                                        text_snippet=href[:200],
+                                    ),
+                                )
+                            )
 
         favicons = _collect_links(head, "icon")
         apple_touch_icons = _collect_links(head, "apple-touch-icon")
@@ -231,6 +266,11 @@ def extract(parsed_site: ParsedSite) -> MetadataResult:
                 verification_tags=verification_tags,
                 web_app_capable=web_app_capable,
                 mobile_web_app_capable=mobile_web_app_capable,
+                csp=csp,
+                msapplication_tile_image=msapplication_tile_image,
+                msapplication_config=msapplication_config,
+                geo_meta=geo_meta,
+                resource_hints=resource_hints,
             )
         )
 

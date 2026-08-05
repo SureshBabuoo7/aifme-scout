@@ -25,6 +25,7 @@ from aifme_scout.extractors.models import (
     TechnologyEvidence,
     TechnologyResult,
 )
+from aifme_scout.scanner.models import RawPage, RawSite
 
 if TYPE_CHECKING:
     pass
@@ -243,6 +244,19 @@ def _collect_seo_evidence(result: SEOResult | None) -> list[EvidenceItem]:
                     timestamp=_utc_timestamp(),
                 )
             )
+        if page.hreflang:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="HREFLANG",
+                    extractor_source="seo",
+                    value=page.hreflang,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
         if page.open_graph is not None and page.open_graph.title is not None:
             items.append(
                 EvidenceItem(
@@ -260,6 +274,58 @@ def _collect_seo_evidence(result: SEOResult | None) -> list[EvidenceItem]:
                     timestamp=_utc_timestamp(),
                 )
             )
+            if page.open_graph.image is not None:
+                items.append(
+                    EvidenceItem(
+                        evidence_id="",
+                        evidence_type="OPEN_GRAPH_IMAGE",
+                        extractor_source="seo",
+                        value=page.open_graph.image,
+                        provenance=EvidenceProvenance(page_url=page.url),
+                        confidence="high",
+                        page_url=page.url,
+                        timestamp=_utc_timestamp(),
+                    )
+                )
+            if page.open_graph.url is not None:
+                items.append(
+                    EvidenceItem(
+                        evidence_id="",
+                        evidence_type="OPEN_GRAPH_URL",
+                        extractor_source="seo",
+                        value=page.open_graph.url,
+                        provenance=EvidenceProvenance(page_url=page.url),
+                        confidence="high",
+                        page_url=page.url,
+                        timestamp=_utc_timestamp(),
+                    )
+                )
+            if page.open_graph.type is not None:
+                items.append(
+                    EvidenceItem(
+                        evidence_id="",
+                        evidence_type="OPEN_GRAPH_TYPE",
+                        extractor_source="seo",
+                        value=page.open_graph.type,
+                        provenance=EvidenceProvenance(page_url=page.url),
+                        confidence="high",
+                        page_url=page.url,
+                        timestamp=_utc_timestamp(),
+                    )
+                )
+            if page.open_graph.site_name is not None:
+                items.append(
+                    EvidenceItem(
+                        evidence_id="",
+                        evidence_type="OPEN_GRAPH_SITE_NAME",
+                        extractor_source="seo",
+                        value=page.open_graph.site_name,
+                        provenance=EvidenceProvenance(page_url=page.url),
+                        confidence="high",
+                        page_url=page.url,
+                        timestamp=_utc_timestamp(),
+                    )
+                )
         if page.twitter_card is not None and page.twitter_card.title is not None:
             items.append(
                 EvidenceItem(
@@ -271,6 +337,87 @@ def _collect_seo_evidence(result: SEOResult | None) -> list[EvidenceItem]:
                         "description": page.twitter_card.description,
                     },
                     provenance=_element_provenance_to_evidence(page.twitter_card.provenance),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+            if page.twitter_card.card is not None:
+                items.append(
+                    EvidenceItem(
+                        evidence_id="",
+                        evidence_type="TWITTER_CARD_TYPE",
+                        extractor_source="seo",
+                        value=page.twitter_card.card,
+                        provenance=EvidenceProvenance(page_url=page.url),
+                        confidence="high",
+                        page_url=page.url,
+                        timestamp=_utc_timestamp(),
+                    )
+                )
+            if page.twitter_card.image is not None:
+                items.append(
+                    EvidenceItem(
+                        evidence_id="",
+                        evidence_type="TWITTER_CARD_IMAGE",
+                        extractor_source="seo",
+                        value=page.twitter_card.image,
+                        provenance=EvidenceProvenance(page_url=page.url),
+                        confidence="high",
+                        page_url=page.url,
+                        timestamp=_utc_timestamp(),
+                    )
+                )
+            if page.twitter_card.site is not None:
+                items.append(
+                    EvidenceItem(
+                        evidence_id="",
+                        evidence_type="TWITTER_CARD_SITE",
+                        extractor_source="seo",
+                        value=page.twitter_card.site,
+                        provenance=EvidenceProvenance(page_url=page.url),
+                        confidence="high",
+                        page_url=page.url,
+                        timestamp=_utc_timestamp(),
+                    )
+                )
+        if page.pagination_rel:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="PAGINATION",
+                    extractor_source="seo",
+                    value=page.pagination_rel,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        if page.has_amp:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="AMP_DETECTION",
+                    extractor_source="seo",
+                    value={"method": page.amp_detection_method} if page.amp_detection_method else True,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        if page.schema_org_type is not None:
+            value: object = page.schema_org_type
+            if page.schema_org_name is not None:
+                value = {"type": page.schema_org_type, "name": page.schema_org_name}
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="SCHEMA_ORG_TYPE",
+                    extractor_source="seo",
+                    value=value,
+                    provenance=EvidenceProvenance(page_url=page.url),
                     confidence="high",
                     page_url=page.url,
                     timestamp=_utc_timestamp(),
@@ -541,6 +688,72 @@ def _collect_metadata_evidence(result: MetadataResult | None) -> list[EvidenceIt
                     timestamp=_utc_timestamp(),
                 )
             )
+        for hint in page.resource_hints:
+            rel = hint.rel or ""
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type=rel.upper() if rel else "RESOURCE_HINT",
+                    extractor_source="metadata",
+                    value=hint.url,
+                    provenance=_element_provenance_to_evidence(hint.provenance),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        if page.csp is not None and page.csp.value is not None:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="CONTENT_SECURITY_POLICY",
+                    extractor_source="metadata",
+                    value=page.csp.value,
+                    provenance=_element_provenance_to_evidence(page.csp.provenance),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        if page.msapplication_tile_image is not None and page.msapplication_tile_image.value is not None:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="MSAPPLICATION_TILEIMAGE",
+                    extractor_source="metadata",
+                    value=page.msapplication_tile_image.value,
+                    provenance=_element_provenance_to_evidence(page.msapplication_tile_image.provenance),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        if page.msapplication_config is not None and page.msapplication_config.value is not None:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="MSAPPLICATION_CONFIG",
+                    extractor_source="metadata",
+                    value=page.msapplication_config.value,
+                    provenance=_element_provenance_to_evidence(page.msapplication_config.provenance),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        if page.geo_meta:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="GEO_META",
+                    extractor_source="metadata",
+                    value=page.geo_meta,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
     return items
 
 
@@ -716,6 +929,123 @@ def _collect_content_evidence(result: ContentResult | None) -> list[EvidenceItem
                     timestamp=_utc_timestamp(),
                 )
             )
+        for email in page.contact_emails:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="CONTACT_EMAIL",
+                    extractor_source="content",
+                    value=email,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        for phone in page.contact_phones:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="CONTACT_PHONE",
+                    extractor_source="content",
+                    value=phone,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        for video in page.videos:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="CONTENT_VIDEO",
+                    extractor_source="content",
+                    value=video,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        for audio in page.audios:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="CONTENT_AUDIO",
+                    extractor_source="content",
+                    value=audio,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        for bq in page.blockquotes:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="CONTENT_BLOCKQUOTE",
+                    extractor_source="content",
+                    value=bq,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        for code in page.code_blocks:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="CONTENT_CODE",
+                    extractor_source="content",
+                    value=code,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        for dl in page.definition_lists:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="CONTENT_DEFINITION_LIST",
+                    extractor_source="content",
+                    value=dl,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        if page.address is not None:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="CONTENT_ADDRESS",
+                    extractor_source="content",
+                    value=page.address,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        for fc in page.figure_captions:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="CONTENT_FIGURE_CAPTION",
+                    extractor_source="content",
+                    value=fc,
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
     return items
 
 
@@ -792,6 +1122,56 @@ def _collect_competitor_evidence(result: CompetitorResult | None) -> list[Eviden
     return items
 
 
+def _collect_scanner_evidence(raw_site: RawSite) -> list[EvidenceItem]:
+    """Collect scanner-level evidence from RawSite."""
+    items: list[EvidenceItem] = []
+    target_url = raw_site.target_url
+
+    for page in raw_site.pages:
+        if page.is_anti_bot_challenge:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="ANTI_BOT_CHALLENGE",
+                    extractor_source="scanner",
+                    value="Anti-bot challenge detected (Cloudflare, Imperva, Datadome, or similar)",
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+        if page.is_rate_limited:
+            items.append(
+                EvidenceItem(
+                    evidence_id="",
+                    evidence_type="RATE_LIMITED",
+                    extractor_source="scanner",
+                    value="Rate limited (429) after retries",
+                    provenance=EvidenceProvenance(page_url=page.url),
+                    confidence="high",
+                    page_url=page.url,
+                    timestamp=_utc_timestamp(),
+                )
+            )
+
+    if raw_site.sitemap_pages_found > 0:
+        items.append(
+            EvidenceItem(
+                evidence_id="",
+                evidence_type="SITEMAP_DISCOVERED",
+                extractor_source="scanner",
+                value={"count": raw_site.sitemap_pages_found},
+                provenance=EvidenceProvenance(page_url=target_url),
+                confidence="high",
+                page_url=target_url,
+                timestamp=_utc_timestamp(),
+            )
+        )
+
+    return items
+
+
 def _sort_key(item: EvidenceItem) -> tuple[str, ...]:
     """Return a stable sort key for deterministic ordering."""
     return (
@@ -846,6 +1226,7 @@ def collect(
     social_result: SocialResult | None = None,
     competitor_result: CompetitorResult | None = None,
     target_url: str = "",
+    raw_site: RawSite | None = None,
 ) -> EvidenceCollection:
     """Collect and normalize evidence from all extractor outputs.
 
@@ -861,6 +1242,7 @@ def collect(
         social_result: Social discovery result.
         competitor_result: Competitor discovery result.
         target_url: Canonical target URL.
+        raw_site: Optional RawSite for scanner-level evidence (anti-bot, rate limit, sitemap).
 
     Returns:
         EvidenceCollection with normalized evidence items.
@@ -872,6 +1254,9 @@ def collect(
     items.extend(_collect_content_evidence(content_result))
     items.extend(_collect_social_evidence(social_result))
     items.extend(_collect_competitor_evidence(competitor_result))
+
+    if raw_site is not None:
+        items.extend(_collect_scanner_evidence(raw_site))
 
     deduplicated = _deduplicate(items)
     deduplicated.sort(key=_sort_key)

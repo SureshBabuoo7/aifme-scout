@@ -255,6 +255,7 @@ def _run_extractors_and_build(
         social_result=social_result,
         competitor_result=competitor_result,
         target_url=raw_site.target_url if hasattr(raw_site, "target_url") else "",
+        raw_site=raw_site,
     )
     schema = build_schema(evidence_collection)
     summary = summarize(schema, mode=mode)

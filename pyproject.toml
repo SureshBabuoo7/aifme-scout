@@ -5,22 +5,36 @@ build-backend = "hatchling.build"
 [project]
 name = "aifme-scout"
 version = "1.0.0"
-description = "AIFME Scout OSS - open-source website and marketing intelligence toolkit"
+description = "Open-source website and marketing intelligence toolkit. Scan any URL to get a structured, evidence-linked snapshot of technology, SEO, content, and competitor signals."
 readme = "README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
 authors = [
     {name = "AIFME", email = "oss@aifme.com"},
 ]
-keywords = ["marketing", "intelligence", "scout", "aifme"]
+keywords = [
+    "marketing-intelligence",
+    "web-scraping",
+    "seo",
+    "fastapi",
+    "cli",
+    "json-schema",
+    "website-intelligence",
+    "competitor-analysis",
+    "technology-detection",
+]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
     "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
 ]
 dependencies = [
     "beautifulsoup4>=4.12.0",
@@ -46,8 +60,10 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/SureshBabuoo7/aifme-scout"
-Documentation = "https://github.com/SureshBabuoo7/aifme-scout/blob/master/README.md"
+Documentation = "https://github.com/SureshBabuoo7/aifme-scout/blob/master/docs/QUICK_START.md"
 Repository = "https://github.com/SureshBabuoo7/aifme-scout"
+Changelog = "https://github.com/SureshBabuoo7/aifme-scout/blob/master/CHANGELOG.md"
+Issues = "https://github.com/SureshBabuoo7/aifme-scout/issues"
 
 [project.scripts]
 aifme-scout = "aifme_scout.cli:main"

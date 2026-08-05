@@ -79,7 +79,7 @@ class Element:
 
     def find(self, tag: str, attrs: dict[str, str] | None = None) -> Element | None:
         for child in self._children:
-            if child._tag == tag and _attrs_match(child._attrs, attrs):
+            if (tag in (None, "", "*", True) or child._tag == tag) and _attrs_match(child._attrs, attrs):
                 return child
             found = child.find(tag, attrs)
             if found is not None:
@@ -89,7 +89,7 @@ class Element:
     def find_all(self, tag: str, attrs: dict[str, str] | None = None) -> list[Element]:
         results: list[Element] = []
         for child in self._children:
-            if child._tag == tag and _attrs_match(child._attrs, attrs):
+            if (tag in (None, "", "*", True) or child._tag == tag) and _attrs_match(child._attrs, attrs):
                 results.append(child)
             results.extend(child.find_all(tag, attrs))
         return results

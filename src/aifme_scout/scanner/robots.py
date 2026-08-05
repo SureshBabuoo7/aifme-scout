@@ -36,6 +36,7 @@ def parse_robots_txt(content: str, user_agent: str = "*") -> RobotsPolicy:
         "allow": [],
         "crawl_delay": [],
     }
+    sitemap_urls: list[str] = []
 
     for line in content.splitlines():
         line = line.strip()
@@ -64,6 +65,8 @@ def parse_robots_txt(content: str, user_agent: str = "*") -> RobotsPolicy:
                 current_rules["crawl_delay"].append(str(int(delay_seconds * 1000)))
             except ValueError:
                 pass
+        elif key == "sitemap" and value:
+            sitemap_urls.append(value)
 
     if current_agents:
         sections.append((current_agents, current_rules))
@@ -89,6 +92,7 @@ def parse_robots_txt(content: str, user_agent: str = "*") -> RobotsPolicy:
             with suppress(ValueError, IndexError):
                 policy.crawl_delay_ms = int(matched_section["crawl_delay"][0])
 
+    policy.sitemap_urls = sitemap_urls
     return policy
 
 

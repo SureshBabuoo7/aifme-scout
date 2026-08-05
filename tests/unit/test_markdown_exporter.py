@@ -56,7 +56,7 @@ class TestCompleteSummary:
                 "## Content Summary\nHello world",
                 "## Social Presence Summary\nTwitter: @test",
                 "## Competitor Summary\nCompetitor A",
-                "## Diagnostics\ntotal_evidence_items: 5",
+                "## Technical Diagnostics\ntotal_evidence_items: 5",
                 "## Data Completeness\nSEO: 1 items (complete)",
             ]
         )
@@ -70,7 +70,7 @@ class TestCompleteSummary:
         assert "## Content Summary" in result
         assert "## Social Presence Summary" in result
         assert "## Competitor Summary" in result
-        assert "## Diagnostics" in result
+        assert "## Technical Diagnostics" in result
         assert "## Data Completeness" in result
 
 

@@ -263,3 +263,59 @@ class TestToSimpleSEO:
         simple = to_simple_seo(result)
         assert simple.has_title is False
         assert simple.has_meta_description is False
+
+
+class TestExtendedSEOEvidence:
+    def test_hreflang_evidence(self) -> None:
+        html = _load_fixture("extended-seo.html")
+        result = _parse(html)
+        assert result.pages[0].hreflang == ["en", "es", "fr"]
+
+    def test_open_graph_extended_fields(self) -> None:
+        html = _load_fixture("extended-seo.html")
+        result = _parse(html)
+        og = result.pages[0].open_graph
+        assert og.title == "OG Title"
+        assert og.description == "OG Description"
+        assert og.url == "https://example.com/page"
+        assert og.image == "https://example.com/og-image.jpg"
+        assert og.type == "website"
+        assert og.site_name == "MySite"
+
+    def test_twitter_card_extended_fields(self) -> None:
+        html = _load_fixture("extended-seo.html")
+        result = _parse(html)
+        tc = result.pages[0].twitter_card
+        assert tc.title == "Twitter Title"
+        assert tc.description == "Twitter Desc"
+        assert tc.card == "summary_large_image"
+        assert tc.image == "https://example.com/tw-image.jpg"
+        assert tc.site == "@mysite"
+
+    def test_pagination_rel(self) -> None:
+        html = _load_fixture("extended-seo.html")
+        result = _parse(html)
+        assert result.pages[0].pagination_rel == ["next", "prev"]
+
+    def test_amp_detected_via_link(self) -> None:
+        html = _load_fixture("extended-seo.html")
+        result = _parse(html)
+        assert result.pages[0].has_amp is True
+        assert result.pages[0].amp_detection_method == "link_rel"
+
+    def test_amp_detected_via_html_attribute(self) -> None:
+        html = '<html amp><head><title>AMP</title></head><body></body></html>'
+        result = _parse(html)
+        assert result.pages[0].has_amp is True
+        assert result.pages[0].amp_detection_method == "html_attribute"
+
+    def test_schema_org_type_extracted(self) -> None:
+        html = _load_fixture("extended-seo.html")
+        result = _parse(html)
+        assert result.pages[0].schema_org_type == "Organization"
+        assert result.pages[0].schema_org_name == "Test Organization"
+
+    def test_no_schema_org(self) -> None:
+        html = _load_fixture("minimal.html")
+        result = _parse(html)
+        assert result.pages[0].schema_org_type is None

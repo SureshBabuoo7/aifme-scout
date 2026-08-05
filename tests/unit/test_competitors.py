@@ -217,3 +217,17 @@ class TestGitHubStyle:
         names = _competitor_names(_get_competitors(competitors))
         assert "Gitlab" in names
         assert "Bitbucket" in names
+
+
+class TestVSHeadings:
+    def test_vs_heading_detected(self) -> None:
+        html = _load_fixture("vs-competitors.html")
+        result = _parse(html)
+        names = _competitor_names(_get_competitors(result))
+        assert len(names) > 0
+
+    def test_schema_org_competitor_detected(self) -> None:
+        html = _load_fixture("vs-competitors.html")
+        result = _parse(html)
+        names = _competitor_names(_get_competitors(result))
+        assert len(names) > 0

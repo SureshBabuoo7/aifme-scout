@@ -19,3 +19,11 @@ class ArchitectureViolation(ScoutError):
 
 class UnsupportedFeatureError(ScoutError):
     """Raised when a requested feature is not supported in this version."""
+
+
+class AntiBotChallengeError(ScoutError):
+    """Raised when an anti-bot challenge page is detected."""
+
+
+class RateLimitedError(ScoutError):
+    """Raised when the server rate limits the client after retries."""

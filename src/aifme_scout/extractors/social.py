@@ -38,6 +38,19 @@ PLATFORM_DOMAINS = {
     "pinterest.com": "Pinterest",
     "threads.net": "Threads",
     "medium.com": "Medium",
+    "bsky.app": "Bluesky",
+    "bsky.social": "Bluesky",
+    "mastodon.social": "Mastodon",
+    "mastodon.online": "Mastodon",
+    "twitch.tv": "Twitch",
+    "snapchat.com": "Snapchat",
+    "wa.me": "WhatsApp",
+    "whatsapp.com": "WhatsApp",
+    "t.me": "Telegram",
+    "telegram.me": "Telegram",
+    "behance.net": "Behance",
+    "dribbble.com": "Dribbble",
+    "flickr.com": "Flickr",
 }
 
 
@@ -160,6 +173,145 @@ def discover(parsed_site: ParsedSite) -> SocialResult:
                 )
             )
 
+        icon_platforms = _detect_social_icons(parsed_page.root, parsed_page.url)
+        for profile in icon_platforms:
+            if profile.url not in seen_urls:
+                seen_urls.add(profile.url)
+                profiles.append(profile)
+
+        json_ld_profiles = _detect_json_ld_social(parsed_page.root, parsed_page.url)
+        for profile in json_ld_profiles:
+            if profile.url not in seen_urls:
+                seen_urls.add(profile.url)
+                profiles.append(profile)
+
         pages.append(SocialPageResult(url=parsed_page.url, profiles=profiles))
 
     return SocialResult(target_url=parsed_site.target_url, pages=pages)
+
+
+_ICON_PLATFORM_CLASSES = {
+    "fa-linkedin": "LinkedIn",
+    "fa-x-twitter": "X",
+    "fa-twitter": "X",
+    "fa-facebook": "Facebook",
+    "fa-instagram": "Instagram",
+    "fa-youtube": "YouTube",
+    "fa-tiktok": "TikTok",
+    "fa-github": "GitHub",
+    "fa-gitlab": "GitLab",
+    "fa-discord": "Discord",
+    "fa-reddit": "Reddit",
+    "fa-pinterest": "Pinterest",
+    "fa-medium": "Medium",
+    "fa-bsky": "Bluesky",
+    "fa-mastodon": "Mastodon",
+    "fa-twitch": "Twitch",
+    "fa-snapchat": "Snapchat",
+    "fa-whatsapp": "WhatsApp",
+    "fa-telegram": "Telegram",
+    "fa-behance": "Behance",
+    "fa-dribbble": "Dribbble",
+    "fa-flickr": "Flickr",
+    "fa-tiktok": "TikTok",
+}
+
+
+def _detect_social_icons(root: Element | None, page_url: str) -> list[SocialProfile]:
+    """Detect social profiles via icon class names."""
+    if root is None:
+        return []
+    profiles: list[SocialProfile] = []
+    seen_platforms: set[str] = set()
+
+    for elem in root.find_all(True):
+        class_attr = elem.get("class", "")
+        if not class_attr:
+            continue
+        classes = class_attr.split() if isinstance(class_attr, str) else list(class_attr)
+        for cls in classes:
+            cls_lower = cls.lower()
+            if cls_lower in _ICON_PLATFORM_CLASSES:
+                platform = _ICON_PLATFORM_CLASSES[cls_lower]
+                if platform not in seen_platforms:
+                    seen_platforms.add(platform)
+                    href = elem.get("href", "")
+                    url = href if href and (href.startswith("http://") or href.startswith("https://")) else ""
+                    profiles.append(
+                        SocialProfile(
+                            platform=platform,
+                            url=url or page_url,
+                            username=None,
+                            detection_method="icon_class",
+                            provenance=SocialProfileProvenance(
+                                page_url=page_url,
+                                dom_path="/",
+                                tag=elem.tag,
+                                attribute="class",
+                                original_url=url,
+                            ),
+                        )
+                    )
+                break
+
+    return profiles
+
+
+def _detect_json_ld_social(root: Element | None, page_url: str) -> list[SocialProfile]:
+    """Detect social profiles from JSON-LD sameAs."""
+    import json
+    import re as _re
+
+    if root is None:
+        return []
+    profiles: list[SocialProfile] = []
+    seen_urls: set[str] = set()
+
+    for script in root.find_all("script", {"type": "application/ld+json"}):
+        raw = script.text or script.string or ""
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            json_text = _re.sub(r'/\*.*?\*/', '', raw, flags=_re.DOTALL)
+            json_text = _re.sub(r'(?<!\S)//.*?$', '', json_text, flags=_re.MULTILINE)
+            data = json.loads(json_text)
+        except Exception:
+            try:
+                data = json.loads(raw)
+            except Exception:
+                continue
+
+        def extract_same_as(node: object) -> None:
+            if isinstance(node, dict):
+                same_as = node.get("sameAs")
+                if isinstance(same_as, list):
+                    for url in same_as:
+                        if isinstance(url, str) and url.startswith("http"):
+                            platform = _detect_platform(url)
+                            if platform and url not in seen_urls:
+                                seen_urls.add(url)
+                                profiles.append(
+                                    SocialProfile(
+                                        platform=platform,
+                                        url=url,
+                                        username=_extract_username(url, platform),
+                                        detection_method="json_ld",
+                                        provenance=SocialProfileProvenance(
+                                            page_url=page_url,
+                                            dom_path="/",
+                                            tag="script",
+                                            attribute="type",
+                                            original_url=url,
+                                        ),
+                                    )
+                                )
+                for value in node.values():
+                    extract_same_as(value)
+            elif isinstance(node, list):
+                for item in node:
+                    extract_same_as(item)
+
+        extract_same_as(data)
+
+    return profiles

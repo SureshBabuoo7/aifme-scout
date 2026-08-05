@@ -212,6 +212,40 @@ def analyze(parsed_site: ParsedSite) -> SEOResult:
                 open_graph = OpenGraphSEO(
                     title=open_graph.title, description=og_desc.get("content")
                 )
+            og_url = head.find("meta", {"property": "og:url"})
+            if og_url is not None:
+                open_graph = OpenGraphSEO(
+                    title=open_graph.title,
+                    description=open_graph.description,
+                    url=og_url.get("content"),
+                )
+            og_image = head.find("meta", {"property": "og:image"})
+            if og_image is not None:
+                open_graph = OpenGraphSEO(
+                    title=open_graph.title,
+                    description=open_graph.description,
+                    url=open_graph.url,
+                    image=og_image.get("content"),
+                )
+            og_type = head.find("meta", {"property": "og:type"})
+            if og_type is not None:
+                open_graph = OpenGraphSEO(
+                    title=open_graph.title,
+                    description=open_graph.description,
+                    url=open_graph.url,
+                    image=open_graph.image,
+                    type=og_type.get("content"),
+                )
+            og_site_name = head.find("meta", {"property": "og:site_name"})
+            if og_site_name is not None:
+                open_graph = OpenGraphSEO(
+                    title=open_graph.title,
+                    description=open_graph.description,
+                    url=open_graph.url,
+                    image=open_graph.image,
+                    type=open_graph.type,
+                    site_name=og_site_name.get("content"),
+                )
 
         twitter_card = TwitterCardSEO()
         if head is not None:
@@ -223,9 +257,86 @@ def analyze(parsed_site: ParsedSite) -> SEOResult:
                 twitter_card = TwitterCardSEO(
                     title=twitter_card.title, description=tw_desc.get("content")
                 )
+            tw_card = head.find("meta", {"name": "twitter:card"})
+            if tw_card is not None:
+                twitter_card = TwitterCardSEO(
+                    title=twitter_card.title,
+                    description=twitter_card.description,
+                    card=tw_card.get("content"),
+                )
+            tw_image = head.find("meta", {"name": "twitter:image"})
+            if tw_image is not None:
+                twitter_card = TwitterCardSEO(
+                    title=twitter_card.title,
+                    description=twitter_card.description,
+                    card=twitter_card.card,
+                    image=tw_image.get("content"),
+                )
+            tw_site = head.find("meta", {"name": "twitter:site"})
+            if tw_site is not None:
+                twitter_card = TwitterCardSEO(
+                    title=twitter_card.title,
+                    description=twitter_card.description,
+                    card=twitter_card.card,
+                    image=twitter_card.image,
+                    site=tw_site.get("content"),
+                )
 
         structured_data = _check_structured_data(root)
         indexability = _extract_indexability(head)
+
+        pagination_rel = []
+        has_amp = False
+        amp_detection_method = None
+        schema_org_type = None
+        schema_org_name = None
+
+        if head is not None:
+            for link in head.find_all("link"):
+                rel = link.get("rel", "")
+                if rel:
+                    rel_parts = rel.split() if isinstance(rel, str) else rel
+                    if "next" in rel_parts:
+                        pagination_rel.append("next")
+                    if "prev" in rel_parts:
+                        pagination_rel.append("prev")
+                    if "amphtml" in rel_parts:
+                        has_amp = True
+                        amp_detection_method = "link_rel"
+
+        if root is not None:
+            html_element = root.find("html")
+            if html_element is not None and html_element.get("amp") is not None:
+                has_amp = True
+                amp_detection_method = "html_attribute"
+
+            for script in root.find_all("script", {"type": "application/ld+json"}):
+                import json
+                import re as _re
+                try:
+                    raw = script.text or script.string or ""
+                    raw = raw.strip()
+                    if not raw:
+                        continue
+                    json_text = _re.sub(r'/\*.*?\*/', '', raw, flags=_re.DOTALL)
+                    json_text = _re.sub(r'(?<!\S)//.*?$', '', json_text, flags=_re.MULTILINE)
+                    data = json.loads(json_text)
+                    if isinstance(data, dict):
+                        s_type = data.get("@type") or data.get("type")
+                        if s_type is None and "@graph" in data:
+                            graph = data["@graph"]
+                            if isinstance(graph, list):
+                                for node in graph:
+                                    if isinstance(node, dict):
+                                        s_type = node.get("@type") or node.get("type")
+                                        if s_type:
+                                            break
+                        if s_type:
+                            schema_org_type = str(s_type)
+                            schema_org_name = data.get("name")
+                            break
+                except Exception:
+                    continue
 
         pages.append(
             SEOPageResult(
@@ -243,6 +354,11 @@ def analyze(parsed_site: ParsedSite) -> SEOResult:
                 twitter_card=twitter_card,
                 structured_data=structured_data,
                 indexability=indexability,
+                pagination_rel=pagination_rel,
+                has_amp=has_amp,
+                amp_detection_method=amp_detection_method,
+                schema_org_type=schema_org_type,
+                schema_org_name=schema_org_name,
             )
         )
 
